@@ -1,0 +1,6 @@
+- [x] `zh/` 目录及其必要的子目录结构已成功创建
+- [x] 根目录的主要英文文档（如 `AGENTS.md`, `CONTRIBUTING.md`, `FIX-BLOCKS.md`）已翻译并存放在 `zh/` 下
+- [x] `.opencode/`（包含 `skills` 和 `command` 等）下的英文文档已翻译并存放在 `zh/.opencode/` 下
+- [x] `docs/` 目录下的所有英文文档已翻译并存放在 `zh/docs/` 及其对应子目录下
+- [x] `src/` 目录下的所有英文说明文档（如各个 `AGENTS.md`）已翻译并存放在 `zh/src/` 的对应子目录下
+- [x] 所有翻译完成的文档中没有破坏原有的 Markdown 格式（如代码块、链接等）
