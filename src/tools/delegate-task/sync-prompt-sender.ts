@@ -1,4 +1,5 @@
 import type { DelegateTaskArgs, OpencodeClient, DelegatedModelConfig } from "./types"
+import type { SisyphusAgentConfig } from "../../config/schema"
 import { isPlanFamily } from "./constants"
 import { buildTaskPrompt } from "./prompt-builder"
 import {
@@ -21,6 +22,24 @@ const sendSyncPromptDeps: SendSyncPromptDeps = {
   promptSyncWithModelSuggestionRetry,
 }
 
+function buildPromptGenerationParams(model: DelegatedModelConfig | undefined): Record<string, unknown> {
+  if (!model) {
+    return {}
+  }
+
+  const promptOptions: Record<string, unknown> = {
+    ...(model.reasoningEffort ? { reasoningEffort: model.reasoningEffort } : {}),
+    ...(model.thinking ? { thinking: model.thinking } : {}),
+  }
+
+  return {
+    ...(model.temperature !== undefined ? { temperature: model.temperature } : {}),
+    ...(model.top_p !== undefined ? { topP: model.top_p } : {}),
+    ...(model.maxTokens !== undefined ? { maxOutputTokens: model.maxTokens } : {}),
+    ...(Object.keys(promptOptions).length > 0 ? { options: promptOptions } : {}),
+  }
+}
+
 function isOracleAgent(agentToUse: string): boolean {
   return agentToUse.toLowerCase() === "oracle"
 }
@@ -41,11 +60,13 @@ export async function sendSyncPrompt(
     categoryModel: DelegatedModelConfig | undefined
     toastManager: { removeTask: (id: string) => void } | null | undefined
     taskId: string | undefined
+    sisyphusAgentConfig?: SisyphusAgentConfig
   },
   deps: SendSyncPromptDeps = sendSyncPromptDeps
 ): Promise<string | null> {
   const allowTask = isPlanFamily(input.agentToUse)
-  const effectivePrompt = buildTaskPrompt(input.args.prompt, input.agentToUse)
+  const tddEnabled = input.sisyphusAgentConfig?.tdd
+  const effectivePrompt = buildTaskPrompt(input.args.prompt, input.agentToUse, tddEnabled)
   const tools = {
     task: allowTask,
     call_omo_agent: true,
@@ -59,7 +80,7 @@ export async function sendSyncPrompt(
   const promptArgs = {
     path: { id: input.sessionID },
     body: {
-      agent: input.agentToUse,
+      agent: input.agentToUse.replace(/^\u200B+/, ""),
       system: input.systemContent,
       tools,
       parts: [createInternalAgentTextPart(effectivePrompt)],
@@ -72,6 +93,7 @@ export async function sendSyncPrompt(
           }
         : {}),
       ...(input.categoryModel?.variant ? { variant: input.categoryModel.variant } : {}),
+      ...buildPromptGenerationParams(input.categoryModel),
     },
   }
 

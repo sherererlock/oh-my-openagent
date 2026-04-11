@@ -1,4 +1,5 @@
 import { log } from "../../shared"
+import { CONFIG_BASENAME } from "../../shared/plugin-identity"
 
 import type { BackgroundTaskConfig } from "../../config/schema"
 import type { BackgroundTask } from "./types"
@@ -13,7 +14,9 @@ import {
   TERMINAL_TASK_TTL_MS,
   TASK_TTL_MS,
 } from "./constants"
+import { abortWithTimeout } from "./abort-with-timeout"
 import { removeTaskToastTracking } from "./remove-task-toast-tracking"
+import { MIN_SESSION_GONE_POLLS, verifySessionExists } from "./session-existence"
 
 import { isActiveSessionStatus } from "./session-status-classifier"
 const TERMINAL_TASK_STATUSES = new Set<BackgroundTask["status"]>([
@@ -118,6 +121,7 @@ export async function checkAndInterruptStaleTasks(args: {
   const staleTimeoutMs = config?.staleTimeoutMs ?? DEFAULT_STALE_TIMEOUT_MS
   const sessionGoneTimeoutMs = config?.sessionGoneTimeoutMs ?? DEFAULT_SESSION_GONE_TIMEOUT_MS
   const now = Date.now()
+  const abortPromises: Array<Promise<unknown>> = []
 
   const messageStalenessMs = config?.messageStalenessTimeoutMs ?? DEFAULT_MESSAGE_STALENESS_TIMEOUT_MS
 
@@ -130,18 +134,32 @@ export async function checkAndInterruptStaleTasks(args: {
 
     const sessionStatus = sessionStatuses?.[sessionID]?.type
     const sessionIsRunning = sessionStatus !== undefined && isActiveSessionStatus(sessionStatus)
-    const sessionGone = sessionStatuses !== undefined && sessionStatus === undefined
+    const sessionMissing = sessionStatuses !== undefined && sessionStatus === undefined
     const runtime = now - startedAt.getTime()
+
+    if (sessionMissing) {
+      task.consecutiveMissedPolls = (task.consecutiveMissedPolls ?? 0) + 1
+    } else if (sessionStatuses !== undefined) {
+      task.consecutiveMissedPolls = 0
+    }
+
+    const sessionGone = sessionMissing && (task.consecutiveMissedPolls ?? 0) >= MIN_SESSION_GONE_POLLS
 
     if (!task.progress?.lastUpdate) {
       if (sessionIsRunning) continue
+      if (sessionMissing && !sessionGone) continue
       const effectiveTimeout = sessionGone ? sessionGoneTimeoutMs : messageStalenessMs
       if (runtime <= effectiveTimeout) continue
+
+      if (sessionGone && await verifySessionExists(client, sessionID)) {
+        task.consecutiveMissedPolls = 0
+        continue
+      }
 
       const staleMinutes = Math.round(runtime / 60000)
       const reason = sessionGone ? "session gone from status registry" : "no activity"
       task.status = "cancelled"
-      task.error = `Stale timeout (${reason} for ${staleMinutes}min since start). This is a FINAL cancellation - do NOT create a replacement task. If the timeout is too short, increase 'background_task.${sessionGone ? "sessionGoneTimeoutMs" : "staleTimeoutMs"}' in .opencode/oh-my-opencode.json.`
+      task.error = `Stale timeout (${reason} for ${staleMinutes}min since start). This is a FINAL cancellation - do NOT create a replacement task. If the timeout is too short, increase 'background_task.${sessionGone ? "sessionGoneTimeoutMs" : "staleTimeoutMs"}' in .opencode/${CONFIG_BASENAME}.json.`
       task.completedAt = new Date()
 
       if (task.concurrencyKey) {
@@ -151,7 +169,7 @@ export async function checkAndInterruptStaleTasks(args: {
 
       onTaskInterrupted(task)
 
-      client.session.abort({ path: { id: sessionID } }).catch(() => {})
+      abortPromises.push(abortWithTimeout(client, sessionID))
       log(`[background-agent] Task ${task.id} interrupted: no progress since start`)
 
       try {
@@ -171,11 +189,16 @@ export async function checkAndInterruptStaleTasks(args: {
     if (timeSinceLastUpdate <= effectiveStaleTimeout) continue
     if (task.status !== "running") continue
 
-     const staleMinutes = Math.round(timeSinceLastUpdate / 60000)
-     const reason = sessionGone ? "session gone from status registry" : "no activity"
-     task.status = "cancelled"
-     task.error = `Stale timeout (${reason} for ${staleMinutes}min). This is a FINAL cancellation - do NOT create a replacement task. If the timeout is too short, increase 'background_task.${sessionGone ? "sessionGoneTimeoutMs" : "staleTimeoutMs"}' in .opencode/oh-my-opencode.json.`
-     task.completedAt = new Date()
+    if (sessionGone && await verifySessionExists(client, sessionID)) {
+      task.consecutiveMissedPolls = 0
+      continue
+    }
+
+    const staleMinutes = Math.round(timeSinceLastUpdate / 60000)
+    const reason = sessionGone ? "session gone from status registry" : "no activity"
+    task.status = "cancelled"
+    task.error = `Stale timeout (${reason} for ${staleMinutes}min). This is a FINAL cancellation - do NOT create a replacement task. If the timeout is too short, increase 'background_task.${sessionGone ? "sessionGoneTimeoutMs" : "staleTimeoutMs"}' in .opencode/${CONFIG_BASENAME}.json.`
+    task.completedAt = new Date()
 
     if (task.concurrencyKey) {
       concurrencyManager.release(task.concurrencyKey)
@@ -184,7 +207,7 @@ export async function checkAndInterruptStaleTasks(args: {
 
     onTaskInterrupted(task)
 
-    client.session.abort({ path: { id: sessionID } }).catch(() => {})
+    abortPromises.push(abortWithTimeout(client, sessionID))
     log(`[background-agent] Task ${task.id} interrupted: stale timeout`)
 
     try {
@@ -192,5 +215,9 @@ export async function checkAndInterruptStaleTasks(args: {
     } catch (err) {
       log("[background-agent] Error in notifyParentSession for stale task:", { taskId: task.id, error: err })
     }
+  }
+
+  if (abortPromises.length > 0) {
+    await Promise.allSettled(abortPromises)
   }
 }

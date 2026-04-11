@@ -1,26 +1,37 @@
-import { describe, expect, test, beforeEach, afterEach, spyOn } from "bun:test"
-import { createRuntimeFallbackHook } from "./index"
+import { describe, expect, test, beforeEach, afterEach, mock } from "bun:test"
 import type { RuntimeFallbackConfig, OhMyOpenCodeConfig } from "../../config"
-import * as sharedModule from "../../shared"
+import * as loggerModule from "../../shared/logger"
 import { SessionCategoryRegistry } from "../../shared/session-category-registry"
+
+type RuntimeFallbackModule = typeof import("./hook")
 
 describe("runtime-fallback", () => {
   let logCalls: Array<{ msg: string; data?: unknown }>
-  let logSpy: ReturnType<typeof spyOn>
   let toastCalls: Array<{ title: string; message: string; variant: string }>
+  let createRuntimeFallbackHook: RuntimeFallbackModule["createRuntimeFallbackHook"]
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    mock.restore()
     logCalls = []
     toastCalls = []
     SessionCategoryRegistry.clear()
-    logSpy = spyOn(sharedModule, "log").mockImplementation((msg: string, data?: unknown) => {
-      logCalls.push({ msg, data })
-    })
+
+    const cacheBuster = `${Date.now()}-${Math.random()}`
+
+    mock.module("../../shared/logger", () => ({
+      ...loggerModule,
+      log: (msg: string, data?: unknown) => {
+        logCalls.push({ msg, data })
+      },
+    }))
+
+    const runtimeFallbackModule: RuntimeFallbackModule = await import(`./hook?test=${cacheBuster}`)
+    createRuntimeFallbackHook = runtimeFallbackModule.createRuntimeFallbackHook
   })
 
   afterEach(() => {
     SessionCategoryRegistry.clear()
-    logSpy?.mockRestore()
+    mock.restore()
   })
 
   function createMockPluginInput(overrides?: {
@@ -64,6 +75,11 @@ describe("runtime-fallback", () => {
 
   function createMockPluginConfigWithCategoryFallback(fallbackModels: string[]): OhMyOpenCodeConfig {
     return {
+      git_master: {
+        commit_footer: true,
+        include_co_authored_by: true,
+        git_env_prefix: "GIT_MASTER=1",
+      },
       categories: {
         test: {
           fallback_models: fallbackModels,
@@ -79,6 +95,11 @@ describe("runtime-fallback", () => {
     variant?: string,
   ): OhMyOpenCodeConfig {
     return {
+      git_master: {
+        commit_footer: true,
+        include_co_authored_by: true,
+        git_env_prefix: "GIT_MASTER=1",
+      },
       categories: {
         [categoryName]: {
           model,
@@ -270,6 +291,38 @@ describe("runtime-fallback", () => {
 
       const errorLog = logCalls.find((c) => c.msg.includes("session.error received"))
       expect(errorLog).toBeDefined()
+    })
+
+    test("should NOT trigger fallback for quota exhaustion without auto-retry signal (STOP classification)", async () => {
+      const hook = createRuntimeFallbackHook(createMockPluginInput(), {
+        config: createMockConfig({ notify_on_fallback: false }),
+        pluginConfig: createMockPluginConfigWithCategoryFallback(["zai-coding-plan/glm-5.1"]),
+      })
+      const sessionID = "test-session-usage-limit"
+      SessionCategoryRegistry.register(sessionID, "test")
+
+      await hook.event({
+        event: {
+          type: "session.created",
+          properties: { info: { id: sessionID, model: "kimi-for-coding/k2p5" } },
+        },
+      })
+
+      await hook.event({
+        event: {
+          type: "session.error",
+          properties: {
+            sessionID,
+            error: { message: "You've reached your usage limit for this month. Please upgrade to continue." },
+          },
+        },
+      })
+
+      const fallbackLog = logCalls.find((c) => c.msg.includes("Preparing fallback"))
+      expect(fallbackLog).toBeUndefined()
+
+      const skipLog = logCalls.find((c) => c.msg.includes("Error not retryable"))
+      expect(skipLog).toBeDefined()
     })
 
     test("should continue fallback chain when fallback model is not found", async () => {
@@ -476,7 +529,7 @@ describe("runtime-fallback", () => {
 
     test("should trigger fallback on OpenAI auto-retry signal in message.updated", async () => {
       const hook = createRuntimeFallbackHook(createMockPluginInput(), {
-        config: createMockConfig({ notify_on_fallback: false }),
+        config: createMockConfig({ notify_on_fallback: false, timeout_seconds: 30 }),
         pluginConfig: createMockPluginConfigWithCategoryFallback(["anthropic/claude-opus-4-6"]),
       })
 
@@ -767,7 +820,13 @@ describe("runtime-fallback", () => {
     test("should log when no fallback models configured", async () => {
       const hook = createRuntimeFallbackHook(createMockPluginInput(), {
         config: createMockConfig(),
-        pluginConfig: {},
+        pluginConfig: {
+          git_master: {
+            commit_footer: true,
+            include_co_authored_by: true,
+            git_env_prefix: "GIT_MASTER=1",
+          },
+        },
       })
       const sessionID = "test-session-no-fallbacks"
 
@@ -2012,7 +2071,7 @@ describe("runtime-fallback", () => {
       expect(retriedModels).toContain("openai/gpt-5.3-codex")
     })
 
-    test("triggers fallback when message contains type:error parts (e.g. Minimax insufficient balance)", async () => {
+    test("does NOT trigger fallback for quota exhaustion in error parts without auto-retry signal (STOP classification)", async () => {
       const retriedModels: string[] = []
 
       const hook = createRuntimeFallbackHook(
@@ -2060,7 +2119,10 @@ describe("runtime-fallback", () => {
         },
       })
 
-      expect(retriedModels).toContain("openai/gpt-5.4")
+      expect(retriedModels).toHaveLength(0)
+
+      const skipLog = logCalls.find((c) => c.msg.includes("message.updated error not retryable"))
+      expect(skipLog).toBeDefined()
     })
 
     test("triggers fallback when message has mixed text and error parts", async () => {
@@ -2299,6 +2361,11 @@ describe("runtime-fallback", () => {
   describe("fallback models configuration", () => {
     function createMockPluginConfigWithAgentFallback(agentName: string, fallbackModels: string[]): OhMyOpenCodeConfig {
       return {
+        git_master: {
+          commit_footer: true,
+          include_co_authored_by: true,
+          git_env_prefix: "GIT_MASTER=1",
+        },
         agents: {
           [agentName]: {
             fallback_models: fallbackModels,
@@ -2496,6 +2563,11 @@ describe("runtime-fallback", () => {
         {
           config: createMockConfig({ notify_on_fallback: false }),
           pluginConfig: {
+            git_master: {
+              commit_footer: true,
+              include_co_authored_by: true,
+              git_env_prefix: "GIT_MASTER=1",
+            },
             categories: {
               test: {
                 fallback_models: ["provider-a/model-a", "provider-b/model-b"],
@@ -2548,6 +2620,11 @@ describe("runtime-fallback", () => {
       const hook = createRuntimeFallbackHook(createMockPluginInput(), {
         config: createMockConfig({ notify_on_fallback: false }),
         pluginConfig: {
+          git_master: {
+            commit_footer: true,
+            include_co_authored_by: true,
+            git_env_prefix: "GIT_MASTER=1",
+          },
           categories: {
             test: {
               fallback_models: ["provider-a/model-a", "provider-b/model-b"],
@@ -2605,6 +2682,11 @@ describe("runtime-fallback", () => {
         {
           config: createMockConfig({ notify_on_fallback: false }),
           pluginConfig: {
+            git_master: {
+              commit_footer: true,
+              include_co_authored_by: true,
+              git_env_prefix: "GIT_MASTER=1",
+            },
             categories: {
               test: {
                 fallback_models: ["provider-a/model-a", "provider-b/model-b"],
@@ -2647,6 +2729,11 @@ describe("runtime-fallback", () => {
       const hook = createRuntimeFallbackHook(createMockPluginInput(), {
         config: createMockConfig({ notify_on_fallback: false }),
         pluginConfig: {
+          git_master: {
+            commit_footer: true,
+            include_co_authored_by: true,
+            git_env_prefix: "GIT_MASTER=1",
+          },
           categories: {
             test: {
               fallback_models: ["provider-a/model-a", "provider-b/model-b"],

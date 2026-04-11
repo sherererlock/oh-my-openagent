@@ -1,5 +1,6 @@
 import type { OhMyOpenCodeConfig } from "../config";
 import { getAgentDisplayName } from "../shared/agent-display-names";
+import { isTaskSystemEnabled } from "../shared";
 
 type AgentWithPermission = { permission?: Record<string, unknown> };
 
@@ -15,7 +16,7 @@ function getConfigQuestionPermission(): string | null {
 }
 
 function agentByKey(agentResult: Record<string, unknown>, key: string): AgentWithPermission | undefined {
-  return (agentResult[key] ?? agentResult[getAgentDisplayName(key)]) as
+  return (agentResult[getAgentDisplayName(key)] ?? agentResult[key]) as
     | AgentWithPermission
     | undefined;
 }
@@ -25,7 +26,8 @@ export function applyToolConfig(params: {
   pluginConfig: OhMyOpenCodeConfig;
   agentResult: Record<string, unknown>;
 }): void {
-  const denyTodoTools = params.pluginConfig.experimental?.task_system
+  const taskSystemEnabled = isTaskSystemEnabled(params.pluginConfig)
+  const denyTodoTools = taskSystemEnabled
     ? { todowrite: "deny", todoread: "deny" }
     : {}
 
@@ -40,7 +42,7 @@ export function applyToolConfig(params: {
     LspCodeActionResolve: false,
     "task_*": false,
     teammate: false,
-    ...(params.pluginConfig.experimental?.task_system
+    ...(taskSystemEnabled
       ? { todowrite: false, todoread: false }
       : {}),
     ...(skillDeniedByHost

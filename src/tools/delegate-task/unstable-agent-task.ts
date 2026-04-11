@@ -4,6 +4,7 @@ import { DEFAULT_SYNC_POLL_TIMEOUT_MS, getTimingConfig } from "./timing"
 import { buildTaskPrompt } from "./prompt-builder"
 import { cancelUnstableAgentTask } from "./cancel-unstable-agent-task"
 import { storeToolMetadata } from "../../features/tool-metadata-store"
+import { resolveCallID } from "./resolve-call-id"
 import { formatDuration } from "./time-formatter"
 import { formatDetailedError } from "./error-formatting"
 import { getSessionTools } from "../../shared/session-tools-store"
@@ -20,12 +21,13 @@ export async function executeUnstableAgentTask(
   systemContent: string | undefined,
   actualModel: string | undefined
 ): Promise<string> {
-  const { manager, client, syncPollTimeoutMs } = executorCtx
+  const { manager, client, syncPollTimeoutMs, sisyphusAgentConfig } = executorCtx
   let cleanupReason: string | undefined
   let launchedTaskID: string | undefined
 
   try {
-    const effectivePrompt = buildTaskPrompt(args.prompt, agentToUse)
+    const tddEnabled = sisyphusAgentConfig?.tdd
+    const effectivePrompt = buildTaskPrompt(args.prompt, agentToUse, tddEnabled)
     const task = await manager.launch({
       description: args.description,
       prompt: effectivePrompt,
@@ -80,8 +82,9 @@ export async function executeUnstableAgentTask(
       },
     }
     await ctx.metadata?.(bgTaskMeta)
-    if (ctx.callID) {
-      storeToolMetadata(ctx.sessionID, ctx.callID, bgTaskMeta)
+    const callID = resolveCallID(ctx)
+    if (callID) {
+      storeToolMetadata(ctx.sessionID, callID, bgTaskMeta)
     }
 
     const startTime = new Date()

@@ -289,7 +289,7 @@ Domain-specific model delegation used by the `task()` tool. When Sisyphus delega
 | -------------------- | ------------------------------- | ---------------------------------------------- |
 | `visual-engineering` | `google/gemini-3.1-pro` (high)  | Frontend, UI/UX, design, animation             |
 | `ultrabrain`         | `openai/gpt-5.4` (xhigh)        | Deep logical reasoning, complex architecture   |
-| `deep`               | `openai/gpt-5.3-codex` (medium) | Autonomous problem-solving, thorough research  |
+| `deep`               | `openai/gpt-5.4` (medium)       | Autonomous problem-solving, thorough research  |
 | `artistry`           | `google/gemini-3.1-pro` (high)  | Creative/unconventional approaches             |
 | `quick`              | `openai/gpt-5.4-mini`           | Trivial tasks, typo fixes, single-file changes |
 | `unspecified-low`    | `anthropic/claude-sonnet-4-6`   | General tasks, low effort                      |
@@ -355,29 +355,29 @@ Capability data comes from provider runtime metadata first. OmO also ships bundl
 
 | Agent                 | Default Model       | Provider Priority                                                            |
 | --------------------- | ------------------- | ---------------------------------------------------------------------------- |
-| **Sisyphus**          | `claude-opus-4-6`   | `claude-opus-4-6 (max)` → `kimi-k2.5` via OpenCode Go / Kimi providers → `gpt-5.4 (medium)` → `glm-5` → `big-pickle` |
+| **Sisyphus**          | `claude-opus-4-6`   | `anthropic\|github-copilot\|opencode/claude-opus-4-6 (max)` → `opencode-go/kimi-k2.5` → `kimi-for-coding/k2p5` → `opencode\|moonshotai\|moonshotai-cn\|firmware\|ollama-cloud\|aihubmix/kimi-k2.5` → `openai\|github-copilot\|opencode/gpt-5.4 (medium)` → `zai-coding-plan\|opencode/glm-5` → `opencode/big-pickle` |
 | **Hephaestus**        | `gpt-5.4`           | `gpt-5.4 (medium)`                                                           |
-| **oracle**            | `gpt-5.4`           | `gpt-5.4 (high)` → `gemini-3.1-pro (high)` → `claude-opus-4-6 (max)` → `glm-5` |
-| **librarian**         | `minimax-m2.7`      | `opencode-go/minimax-m2.7` → `opencode/minimax-m2.5` → `claude-haiku-4-5` → `gpt-5-nano` |
-| **explore**           | `grok-code-fast-1`  | `grok-code-fast-1` → `opencode-go/minimax-m2.7` → `opencode/minimax-m2.5` → `claude-haiku-4-5` → `gpt-5-nano` |
-| **multimodal-looker** | `gpt-5.4`           | `gpt-5.4 (medium)` → `kimi-k2.5` → `glm-4.6v` → `gpt-5-nano`                |
-| **Prometheus**        | `claude-opus-4-6`   | `claude-opus-4-6 (max)` → `gpt-5.4 (high)` → `glm-5` → `gemini-3.1-pro`     |
-| **Metis**             | `claude-opus-4-6`   | `claude-opus-4-6 (max)` → `gpt-5.4 (high)` → `glm-5` → `k2p5`               |
-| **Momus**             | `gpt-5.4`           | `gpt-5.4 (xhigh)` → `claude-opus-4-6 (max)` → `gemini-3.1-pro (high)` → `glm-5` |
-| **Atlas**             | `claude-sonnet-4-6` | `claude-sonnet-4-6` → `kimi-k2.5` → `gpt-5.4 (medium)` → `minimax-m2.7`     |
+| **oracle**            | `gpt-5.4`           | `openai\|github-copilot\|opencode/gpt-5.4 (high)` → `google\|github-copilot\|opencode/gemini-3.1-pro (high)` → `anthropic\|github-copilot\|opencode/claude-opus-4-6 (max)` → `opencode-go/glm-5` |
+| **librarian**         | `minimax-m2.7`      | `opencode-go/minimax-m2.7` → `opencode/minimax-m2.7-highspeed` → `anthropic\|opencode/claude-haiku-4-5` → `opencode/gpt-5-nano` |
+| **explore**           | `grok-code-fast-1`  | `github-copilot\|xai/grok-code-fast-1` → `opencode-go/minimax-m2.7-highspeed` → `opencode/minimax-m2.7` → `anthropic\|opencode/claude-haiku-4-5` → `opencode/gpt-5-nano` |
+| **multimodal-looker** | `gpt-5.4`           | `openai\|opencode/gpt-5.4 (medium)` → `opencode-go/kimi-k2.5` → `zai-coding-plan/glm-4.6v` → `openai\|github-copilot\|opencode/gpt-5-nano` |
+| **Prometheus**        | `claude-opus-4-6`   | `anthropic\|github-copilot\|opencode/claude-opus-4-6 (max)` → `openai\|github-copilot\|opencode/gpt-5.4 (high)` → `opencode-go/glm-5` → `google\|github-copilot\|opencode/gemini-3.1-pro` |
+| **Metis**             | `claude-opus-4-6`   | `anthropic\|github-copilot\|opencode/claude-opus-4-6 (max)` → `openai\|github-copilot\|opencode/gpt-5.4 (high)` → `opencode-go/glm-5` → `kimi-for-coding/k2p5` |
+| **Momus**             | `gpt-5.4`           | `openai\|github-copilot\|opencode/gpt-5.4 (xhigh)` → `anthropic\|github-copilot\|opencode/claude-opus-4-6 (max)` → `google\|github-copilot\|opencode/gemini-3.1-pro (high)` → `opencode-go/glm-5` |
+| **Atlas**             | `claude-sonnet-4-6` | `anthropic\|github-copilot\|opencode/claude-sonnet-4-6` → `opencode-go/kimi-k2.5` → `openai\|github-copilot\|opencode/gpt-5.4 (medium)` → `opencode-go/minimax-m2.7` |
 
 #### Category Provider Chains
 
 | Category               | Default Model       | Provider Priority                                              |
 | ---------------------- | ------------------- | -------------------------------------------------------------- |
-| **visual-engineering** | `gemini-3.1-pro`    | `gemini-3.1-pro` → `glm-5` → `claude-opus-4-6`                 |
-| **ultrabrain**         | `gpt-5.4`           | `gpt-5.4` → `gemini-3.1-pro` → `claude-opus-4-6`               |
-| **deep**               | `gpt-5.3-codex`     | `gpt-5.3-codex` → `claude-opus-4-6` → `gemini-3.1-pro`         |
-| **artistry**           | `gemini-3.1-pro`    | `gemini-3.1-pro` → `claude-opus-4-6` → `gpt-5.4`               |
-| **quick**              | `gpt-5.4-mini`    | `gpt-5.4-mini` → `claude-haiku-4-5` → `gemini-3-flash` → `minimax-m2.7` → `gpt-5-nano` |
-| **unspecified-low**    | `claude-sonnet-4-6` | `claude-sonnet-4-6` → `gpt-5.3-codex` → `gemini-3-flash` → `minimax-m2.7` |
-| **unspecified-high**   | `claude-opus-4-6`   | `claude-opus-4-6` → `gpt-5.4 (high)` → `glm-5` → `k2p5` → `kimi-k2.5` |
-| **writing**            | `gemini-3-flash`    | `gemini-3-flash` → `claude-sonnet-4-6` → `minimax-m2.7`        |
+| **visual-engineering** | `gemini-3.1-pro`    | `google\|github-copilot\|opencode/gemini-3.1-pro (high)` → `zai-coding-plan\|opencode/glm-5` → `anthropic\|github-copilot\|opencode/claude-opus-4-6 (max)` → `opencode-go/glm-5` → `kimi-for-coding/k2p5` |
+| **ultrabrain**         | `gpt-5.4`           | `openai\|opencode/gpt-5.4 (xhigh)` → `google\|github-copilot\|opencode/gemini-3.1-pro (high)` → `anthropic\|github-copilot\|opencode/claude-opus-4-6 (max)` → `opencode-go/glm-5` |
+| **deep**               | `gpt-5.4`           | `openai\|github-copilot\|venice\|opencode/gpt-5.4 (medium)` → `anthropic\|github-copilot\|opencode/claude-opus-4-6 (max)` → `google\|github-copilot\|opencode/gemini-3.1-pro (high)` |
+| **artistry**           | `gemini-3.1-pro`    | `google\|github-copilot\|opencode/gemini-3.1-pro (high)` → `anthropic\|github-copilot\|opencode/claude-opus-4-6 (max)` → `openai\|github-copilot\|opencode/gpt-5.4` |
+| **quick**              | `gpt-5.4-mini`      | `openai\|github-copilot\|opencode/gpt-5.4-mini` → `anthropic\|github-copilot\|opencode/claude-haiku-4-5` → `google\|github-copilot\|opencode/gemini-3-flash` → `opencode-go/minimax-m2.7` → `opencode/gpt-5-nano` |
+| **unspecified-low**    | `claude-sonnet-4-6` | `anthropic\|github-copilot\|opencode/claude-sonnet-4-6` → `openai\|opencode/gpt-5.3-codex (medium)` → `opencode-go/kimi-k2.5` → `google\|github-copilot\|opencode/gemini-3-flash` → `opencode-go/minimax-m2.7` |
+| **unspecified-high**   | `claude-opus-4-6`   | `anthropic\|github-copilot\|opencode/claude-opus-4-6 (max)` → `openai\|github-copilot\|opencode/gpt-5.4 (high)` → `zai-coding-plan\|opencode/glm-5` → `kimi-for-coding/k2p5` → `opencode-go/glm-5` → `opencode/kimi-k2.5` → `opencode\|moonshotai\|moonshotai-cn\|firmware\|ollama-cloud\|aihubmix/kimi-k2.5` |
+| **writing**            | `gemini-3-flash`    | `google\|github-copilot\|opencode/gemini-3-flash` → `opencode-go/kimi-k2.5` → `anthropic\|github-copilot\|opencode/claude-sonnet-4-6` → `opencode-go/minimax-m2.7` |
 
 Run `bunx oh-my-opencode doctor --verbose` to see effective model resolution for your config.
 
@@ -925,7 +925,7 @@ When enabled, two companion hooks are active: `hashline-read-enhancer` (annotate
     "aggressive_truncation": false,
     "auto_resume": false,
     "disable_omo_env": false,
-    "task_system": false,
+    "task_system": true,
     "dynamic_context_pruning": {
       "enabled": false,
       "notification": "detailed",
@@ -973,6 +973,10 @@ When enabled, two companion hooks are active: `hashline-read-enhancer` (annotate
 | Variable              | Description                                                       |
 | --------------------- | ----------------------------------------------------------------- |
 | `OPENCODE_CONFIG_DIR` | Override OpenCode config directory (useful for profile isolation) |
+| `OMO_SEND_ANONYMOUS_TELEMETRY` | Set to `0`, `false`, or `no` to disable anonymous telemetry |
+| `OMO_DISABLE_POSTHOG` | Legacy telemetry opt-out flag. Set to `1` or `true` to disable PostHog |
+| `POSTHOG_API_KEY` | Optional override for the built-in PostHog project API key |
+| `POSTHOG_HOST` | Override the PostHog ingestion host. Defaults to `https://us.i.posthog.com` |
 
 ### Provider-Specific
 

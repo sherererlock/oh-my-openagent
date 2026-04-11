@@ -29,7 +29,7 @@ export interface SkillLoadOptions {
   /** MCP manager for querying skill-embedded MCP servers */
   mcpManager?: SkillMcpManager
   /** Session ID getter for MCP client identification */
-  getSessionID?: () => string
+  getSessionID?: () => string | undefined
   /** Git master configuration for watermark/co-author settings */
   gitMasterConfig?: GitMasterConfig
   disabledSkills?: Set<string>
@@ -41,8 +41,8 @@ export interface SkillLoadOptions {
   enabledPluginsOverride?: Record<string, boolean>
   /** Native skill accessor from PluginInput for discovering skills registered via config.skills.paths */
   nativeSkills?: {
-    all(): Promise<{ name: string; description: string; location: string; content: string }[]>
-    get(name: string): Promise<{ name: string; description: string; location: string; content: string } | undefined>
-    dirs(): Promise<string[]>
+    all(): { name: string; description: string; location: string; content: string }[] | Promise<{ name: string; description: string; location: string; content: string }[]>
+    get(name: string): { name: string; description: string; location: string; content: string } | undefined | Promise<{ name: string; description: string; location: string; content: string } | undefined>
+    dirs(): string[] | Promise<string[]>
   }
 }
