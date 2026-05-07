@@ -154,6 +154,76 @@ Use \`background_output(task_id="<id>")\` to retrieve each result.
     })
   })
 
+  describe("#given a completed task with retry attempt history", () => {
+    test("#when building the final notification #then it renders the spec-aligned balanced attempt timeline", () => {
+      // given
+      const notification = buildBackgroundTaskNotificationText({
+        task: {
+          id: "task-3",
+          description: "Fallback task",
+          status: "completed",
+          attempts: [
+            {
+              attemptId: "att-1",
+              attemptNumber: 1,
+              sessionId: "ses-primary",
+              providerId: "genai-proxy-openai",
+              modelId: "gpt-5.4-mini",
+              status: "error",
+              error: "Forbidden: Selected provider is forbidden",
+            },
+            {
+              attemptId: "att-2",
+              attemptNumber: 2,
+              sessionId: "ses-fallback",
+              providerId: "anthropic",
+              modelId: "claude-haiku-4.5",
+              status: "completed",
+            },
+          ],
+        },
+        duration: "10s",
+        statusText: "COMPLETED",
+        allComplete: true,
+        remainingCount: 0,
+        completedTasks: [
+          {
+            id: "task-3",
+            description: "Fallback task",
+            status: "completed",
+            attempts: [
+              {
+                attemptId: "att-1",
+                attemptNumber: 1,
+                sessionId: "ses-primary",
+                providerId: "genai-proxy-openai",
+                modelId: "gpt-5.4-mini",
+                status: "error",
+                error: "Forbidden: Selected provider is forbidden",
+              },
+              {
+                attemptId: "att-2",
+                attemptNumber: 2,
+                sessionId: "ses-fallback",
+                providerId: "anthropic",
+                modelId: "claude-haiku-4.5",
+                status: "completed",
+              },
+            ],
+          },
+        ],
+      })
+
+      // then
+      expect(notification).toContain("[ALL BACKGROUND TASKS COMPLETE]")
+      expect(notification).toContain("- `task-3`: Fallback task")
+      expect(notification).toContain("Background task attempts:")
+      expect(notification).toContain("  - Attempt 1 — ERROR — genai-proxy-openai/gpt-5.4-mini — ses-primary")
+      expect(notification).toContain("    Error: Forbidden: Selected provider is forbidden")
+      expect(notification).toContain("  - Attempt 2 — COMPLETED — anthropic/claude-haiku-4.5 — ses-fallback")
+    })
+  })
+
   describe("#given a single task notification with undefined description", () => {
     test("#when building the partial notification #then it uses task ID as fallback", () => {
       // given

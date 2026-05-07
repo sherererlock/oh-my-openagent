@@ -37,8 +37,8 @@ describe("background-agent spawner agent-not-found fallback", () => {
       description: "Implement feature",
       prompt: "Please implement the break-even analysis",
       agent: "Sisyphus-Junior",
-      parentSessionID: "ses_parent",
-      parentMessageID: "msg_parent",
+      parentSessionId: "ses_parent",
+      parentMessageId: "msg_parent",
     })
 
     const item = {
@@ -47,8 +47,8 @@ describe("background-agent spawner agent-not-found fallback", () => {
         description: task.description,
         prompt: task.prompt,
         agent: task.agent,
-        parentSessionID: task.parentSessionID,
-        parentMessageID: task.parentMessageID,
+        parentSessionId: task.parentSessionId,
+        parentMessageId: task.parentMessageId,
         parentModel: task.parentModel,
         parentAgent: task.parentAgent,
         model: task.model,
@@ -109,8 +109,8 @@ describe("background-agent spawner agent-not-found fallback", () => {
       description: "Implement feature",
       prompt: "Do work",
       agent: "Sisyphus-Junior",
-      parentSessionID: "ses_parent",
-      parentMessageID: "msg_parent",
+      parentSessionId: "ses_parent",
+      parentMessageId: "msg_parent",
     })
 
     const item = {
@@ -119,8 +119,8 @@ describe("background-agent spawner agent-not-found fallback", () => {
         description: task.description,
         prompt: task.prompt,
         agent: task.agent,
-        parentSessionID: task.parentSessionID,
-        parentMessageID: task.parentMessageID,
+        parentSessionId: task.parentSessionId,
+        parentMessageId: task.parentMessageId,
       },
     }
 
@@ -162,8 +162,8 @@ describe("background-agent spawner agent-not-found fallback", () => {
       description: "Implement feature",
       prompt: "Do work",
       agent: "Sisyphus-Junior",
-      parentSessionID: "ses_parent",
-      parentMessageID: "msg_parent",
+      parentSessionId: "ses_parent",
+      parentMessageId: "msg_parent",
     })
 
     const item = {
@@ -172,8 +172,8 @@ describe("background-agent spawner agent-not-found fallback", () => {
         description: task.description,
         prompt: task.prompt,
         agent: task.agent,
-        parentSessionID: task.parentSessionID,
-        parentMessageID: task.parentMessageID,
+        parentSessionId: task.parentSessionId,
+        parentMessageId: task.parentMessageId,
       },
     }
 
@@ -221,8 +221,8 @@ describe("background-agent spawner agent-not-found fallback", () => {
       description: "Test task",
       prompt: "Do work",
       agent: "Sisyphus-Junior",
-      parentSessionID: "ses_parent",
-      parentMessageID: "msg_parent",
+      parentSessionId: "ses_parent",
+      parentMessageId: "msg_parent",
     })
 
     const item = {
@@ -231,8 +231,8 @@ describe("background-agent spawner agent-not-found fallback", () => {
         description: task.description,
         prompt: task.prompt,
         agent: task.agent,
-        parentSessionID: task.parentSessionID,
-        parentMessageID: task.parentMessageID,
+        parentSessionId: task.parentSessionId,
+        parentMessageId: task.parentMessageId,
         parentModel: task.parentModel,
         parentAgent: task.parentAgent,
         model: task.model,
@@ -284,8 +284,8 @@ describe("background-agent spawner agent-not-found fallback", () => {
       description: "Test task",
       prompt: "Do work",
       agent: "Custom-Agent",
-      parentSessionID: "ses_parent",
-      parentMessageID: "msg_parent",
+      parentSessionId: "ses_parent",
+      parentMessageId: "msg_parent",
     })
 
     const item = {
@@ -294,8 +294,8 @@ describe("background-agent spawner agent-not-found fallback", () => {
         description: task.description,
         prompt: task.prompt,
         agent: task.agent,
-        parentSessionID: task.parentSessionID,
-        parentMessageID: task.parentMessageID,
+        parentSessionId: task.parentSessionId,
+        parentMessageId: task.parentMessageId,
         parentModel: task.parentModel,
         parentAgent: task.parentAgent,
         model: task.model,
@@ -353,8 +353,8 @@ describe("background-agent spawner fallback model promotion", () => {
       description: "Test task",
       prompt: "Do the thing",
       agent: "oracle",
-      parentSessionID: "parent-1",
-      parentMessageID: "message-1",
+      parentSessionId: "parent-1",
+      parentMessageId: "message-1",
       model: {
         providerID: "openai",
         modelID: "gpt-5.4",
@@ -371,14 +371,14 @@ describe("background-agent spawner fallback model promotion", () => {
       description: "Test task",
       prompt: "Do the thing",
       agent: "oracle",
-      parentSessionID: "parent-1",
-      parentMessageID: "message-1",
+      parentSessionId: "parent-1",
+      parentMessageId: "message-1",
       model: task.model,
     }
 
     //#when
     await startTask(
-      { task, input },
+      { task, input, attemptID: "att_test123" },
       {
         client,
         directory: "/tmp/test",
@@ -427,8 +427,8 @@ describe("background-agent spawner fallback model promotion", () => {
       description: "Test task",
       prompt: "Do work",
       agent: "sisyphus-junior",
-      parentSessionID: "ses_parent",
-      parentMessageID: "msg_parent",
+      parentSessionId: "ses_parent",
+      parentMessageId: "msg_parent",
       model: { providerID: "openai", modelID: "gpt-5.4", variant: "medium" },
     })
 
@@ -438,8 +438,8 @@ describe("background-agent spawner fallback model promotion", () => {
         description: task.description,
         prompt: task.prompt,
         agent: task.agent,
-        parentSessionID: task.parentSessionID,
-        parentMessageID: task.parentMessageID,
+        parentSessionId: task.parentSessionId,
+        parentMessageId: task.parentMessageId,
         parentModel: task.parentModel,
         parentAgent: task.parentAgent,
         model: task.model,
@@ -467,6 +467,62 @@ describe("background-agent spawner fallback model promotion", () => {
     expect(promptCalls[0]?.body?.variant).toBe("medium")
   })
 
+  test("passes query.directory when loading the parent session", async () => {
+    // given
+    const getCalls: Array<Record<string, unknown>> = []
+
+    const client = {
+      session: {
+        get: async (input: Record<string, unknown>) => {
+          getCalls.push(input)
+          return { data: { directory: "/parent/dir" } }
+        },
+        create: async () => ({ data: { id: "ses_child_query" } }),
+        promptAsync: async () => ({}),
+      },
+    }
+
+    const task = createTask({
+      description: "Test task",
+      prompt: "Do work",
+      agent: "sisyphus-junior",
+      parentSessionId: "ses_parent",
+      parentMessageId: "msg_parent",
+    })
+
+    const item = {
+      task,
+      input: {
+        description: task.description,
+        prompt: task.prompt,
+        agent: task.agent,
+        parentSessionId: task.parentSessionId,
+        parentMessageId: task.parentMessageId,
+        parentModel: task.parentModel,
+        parentAgent: task.parentAgent,
+        model: task.model,
+      },
+    }
+
+    // when
+    await startTask(item as never, {
+      client: client as never,
+      directory: "/fallback",
+      concurrencyManager: { release: () => {} } as never,
+      tmuxEnabled: false,
+      onTaskError: () => {},
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // then
+    expect(getCalls).toEqual([
+      {
+        path: { id: "ses_parent" },
+        query: { directory: "/fallback" },
+      },
+    ])
+  })
+
   test("strips leading zwsp from prompt body agent before promptAsync", async () => {
     //#given
     const promptCalls: Array<{ body?: { agent?: string } }> = []
@@ -486,8 +542,8 @@ describe("background-agent spawner fallback model promotion", () => {
       description: "Test task",
       prompt: "Do work",
       agent: "\u200Bsisyphus-junior",
-      parentSessionID: "ses_parent",
-      parentMessageID: "msg_parent",
+      parentSessionId: "ses_parent",
+      parentMessageId: "msg_parent",
     })
 
     const item = {
@@ -496,8 +552,8 @@ describe("background-agent spawner fallback model promotion", () => {
         description: task.description,
         prompt: task.prompt,
         agent: task.agent,
-        parentSessionID: task.parentSessionID,
-        parentMessageID: task.parentMessageID,
+        parentSessionId: task.parentSessionId,
+        parentMessageId: task.parentMessageId,
         parentModel: task.parentModel,
         parentAgent: task.parentAgent,
         model: task.model,
@@ -519,5 +575,140 @@ describe("background-agent spawner fallback model promotion", () => {
     //#then
     expect(promptCalls).toHaveLength(1)
     expect(promptCalls[0]?.body?.agent).toBe("sisyphus-junior")
+  })
+
+  test("strips legacy ZWSP-prefixed agent names from persisted background spawn prompt body (GH-3259)", async () => {
+    //#given - persisted spawn input from v3.14.0-v3.16.0 with ZWSP prefix on agent
+    const promptCalls: Array<{ body?: { agent?: string } }> = []
+
+    const client = {
+      session: {
+        get: async () => ({ data: { directory: "/parent/dir" } }),
+        create: async () => ({ data: { id: "ses_child_legacy_zwsp" } }),
+        promptAsync: async (args?: { body?: { agent?: string } }) => {
+          promptCalls.push(args ?? {})
+          return {}
+        },
+      },
+    }
+
+    const task = createTask({
+      description: "Legacy ZWSP",
+      prompt: "Do work",
+      agent: "\u200B\u200BHephaestus - Deep Agent",
+      parentSessionId: "ses_parent",
+      parentMessageId: "msg_parent",
+    })
+
+    const item = {
+      task,
+      input: {
+        description: task.description,
+        prompt: task.prompt,
+        agent: task.agent,
+        parentSessionId: task.parentSessionId,
+        parentMessageId: task.parentMessageId,
+        parentModel: task.parentModel,
+        parentAgent: task.parentAgent,
+        model: task.model,
+      },
+    }
+
+    const ctx = {
+      client,
+      directory: "/fallback",
+      concurrencyManager: { release: () => {} },
+      tmuxEnabled: false,
+      onTaskError: () => {},
+    }
+
+    //#when
+    await startTask(item as any, ctx as any)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    //#then
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0]?.body?.agent).toBe("Hephaestus - Deep Agent")
+  })
+})
+
+describe("background-agent spawner tmux callback ordering", () => {
+  test("fires promptAsync before tmux callback resolves (no blocking)", async () => {
+    //#given
+    const events: string[] = []
+    let resolveTmuxCallback: () => void = () => {}
+    const tmuxCallbackPromise = new Promise<void>((resolve) => {
+      resolveTmuxCallback = resolve
+    })
+
+    const client = {
+      session: {
+        get: async () => ({ data: { directory: "/tmp/test" } }),
+        create: async () => {
+          events.push("session.create")
+          return { data: { id: "ses_blocking_tmux" } }
+        },
+        promptAsync: async () => {
+          events.push("promptAsync")
+          return { data: {} }
+        },
+      },
+    } as any
+
+    const onSubagentSessionCreated = mock(async () => {
+      events.push("tmux.callback.start")
+      await tmuxCallbackPromise
+      events.push("tmux.callback.end")
+    })
+
+    const task = createTask({
+      description: "Blocking tmux test",
+      prompt: "Do work",
+      agent: "general",
+      parentSessionId: "ses_parent",
+      parentMessageId: "msg_parent",
+    })
+
+    const item = {
+      task,
+      input: {
+        description: task.description,
+        prompt: task.prompt,
+        agent: task.agent,
+        parentSessionId: task.parentSessionId,
+        parentMessageId: task.parentMessageId,
+      },
+    }
+
+    const ctx = {
+      client,
+      directory: "/tmp/test",
+      concurrencyManager: { release: () => {} },
+      tmuxEnabled: true,
+      onSubagentSessionCreated,
+      onTaskError: () => {},
+    }
+
+    const originalTmux = process.env.TMUX
+    process.env.TMUX = "/tmp/fake-tmux-socket"
+
+    try {
+      //#when
+      await startTask(item as any, ctx as any)
+      await new Promise((resolve) => setTimeout(resolve, 20))
+
+      //#then
+      expect(events).toContain("session.create")
+      expect(events).toContain("promptAsync")
+      expect(events).toContain("tmux.callback.start")
+      const promptIdx = events.indexOf("promptAsync")
+      const tmuxStartIdx = events.indexOf("tmux.callback.start")
+      expect(promptIdx < tmuxStartIdx).toBe(true)
+      expect(events).not.toContain("tmux.callback.end")
+    } finally {
+      resolveTmuxCallback()
+      if (originalTmux === undefined) delete process.env.TMUX
+      else process.env.TMUX = originalTmux
+    }
   })
 })

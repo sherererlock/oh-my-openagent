@@ -71,7 +71,7 @@ export async function handleSessionIdle(args: {
   }
 
   const hasRunningBgTasks = backgroundManager
-    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string }) => task.status === "running")
+    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string }) => task.status === "running" || task.status === "pending")
     : false
 
   if (hasRunningBgTasks) {
@@ -109,14 +109,12 @@ export async function handleSessionIdle(args: {
 
   if (!todos || todos.length === 0) {
     sessionStateStore.resetContinuationProgress(sessionID)
-    sessionStateStore.resetContinuationProgress(sessionID)
     log(`[${HOOK_NAME}] No todos`, { sessionID })
     return
   }
 
   const incompleteCount = getIncompleteCount(todos)
   if (incompleteCount === 0) {
-    sessionStateStore.resetContinuationProgress(sessionID)
     sessionStateStore.resetContinuationProgress(sessionID)
     log(`[${HOOK_NAME}] All todos complete`, { sessionID, total: todos.length })
     return

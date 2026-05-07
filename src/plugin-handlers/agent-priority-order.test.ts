@@ -6,7 +6,7 @@ import {
   reorderAgentsByPriority,
   CANONICAL_CORE_AGENT_ORDER,
 } from "./agent-priority-order"
-import { getAgentDisplayName } from "../shared/agent-display-names"
+import { getAgentDisplayName, getAgentListDisplayName } from "../shared/agent-display-names"
 
 describe("agent-priority-order", () => {
   describe("CANONICAL_CORE_AGENT_ORDER", () => {
@@ -36,10 +36,10 @@ describe("agent-priority-order", () => {
 
   describe("reorderAgentsByPriority", () => {
     // given: display names for all core agents
-    const sisyphus = getAgentDisplayName("sisyphus")
-    const hephaestus = getAgentDisplayName("hephaestus")
-    const prometheus = getAgentDisplayName("prometheus")
-    const atlas = getAgentDisplayName("atlas")
+    const sisyphus = getAgentListDisplayName("sisyphus")
+    const hephaestus = getAgentListDisplayName("hephaestus")
+    const prometheus = getAgentListDisplayName("prometheus")
+    const atlas = getAgentListDisplayName("atlas")
     const oracle = getAgentDisplayName("oracle")
     const librarian = getAgentDisplayName("librarian")
     const explore = getAgentDisplayName("explore")
@@ -185,7 +185,7 @@ describe("agent-priority-order", () => {
         const agents: Record<string, unknown> = {
           [sisyphus]: { name: "sisyphus", mode: "primary" },
           [hephaestus]: { name: "hephaestus", mode: "primary" },
-          [prometheus]: { name: "prometheus", mode: "all" },
+          [prometheus]: { name: "prometheus", mode: "primary" },
           [atlas]: { name: "atlas", mode: "primary" },
         }
 
@@ -195,7 +195,7 @@ describe("agent-priority-order", () => {
         // then
         expect(result[sisyphus]).toEqual({ name: "sisyphus", mode: "primary", order: 1 })
         expect(result[hephaestus]).toEqual({ name: "hephaestus", mode: "primary", order: 2 })
-        expect(result[prometheus]).toEqual({ name: "prometheus", mode: "all", order: 3 })
+        expect(result[prometheus]).toEqual({ name: "prometheus", mode: "primary", order: 3 })
         expect(result[atlas]).toEqual({ name: "atlas", mode: "primary", order: 4 })
       })
 

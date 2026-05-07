@@ -69,8 +69,8 @@ function createMockTask(overrides: Partial<BackgroundTask> = {}): BackgroundTask
     prompt: "test prompt",
     agent: "sisyphus-junior",
     status: "error",
-    parentSessionID: "parent-session-1",
-    parentMessageID: "parent-message-1",
+    parentSessionId: "parent-session-1",
+    parentMessageId: "parent-message-1",
     fallbackChain: [
       { model: "fallback-model-1", providers: ["provider-a"], variant: undefined },
       { model: "fallback-model-2", providers: ["provider-b"], variant: undefined },
@@ -174,13 +174,13 @@ describe("tryFallbackRetry", () => {
 
     test("clears sessionID and startedAt", async () => {
       const args = createDefaultArgs({
-        sessionID: "old-session",
+        sessionId: "old-session",
         startedAt: new Date(),
       })
 
       await tryFallbackRetry(args)
 
-      expect(args.task.sessionID).toBeUndefined()
+      expect(args.task.sessionId).toBeUndefined()
       expect(args.task.startedAt).toBeUndefined()
     })
 
@@ -217,7 +217,7 @@ describe("tryFallbackRetry", () => {
     })
 
     test("aborts existing session", async () => {
-      const args = createDefaultArgs({ sessionID: "session-to-abort" })
+      const args = createDefaultArgs({ sessionId: "session-to-abort" })
 
       await tryFallbackRetry(args)
 
@@ -227,7 +227,7 @@ describe("tryFallbackRetry", () => {
     })
 
     test("waits for session abort before resolving", async () => {
-      const args = createDefaultArgs({ sessionID: "session-to-abort" })
+      const args = createDefaultArgs({ sessionId: "session-to-abort" })
       const deferred = createDeferredPromise()
       args.abortMock.mockImplementationOnce(() => deferred.promise)
 
@@ -258,6 +258,57 @@ describe("tryFallbackRetry", () => {
       expect(queue!.length).toBe(1)
       expect(queue![0].task).toBe(args.task)
       expect(args.processKey).toHaveBeenCalledWith(key)
+    })
+
+    test("finalizes the failed attempt, creates a new pending attempt, and enqueues its explicit attemptID", async () => {
+      const args = createDefaultArgs({
+        status: "running",
+        sessionId: "session-attempt-1",
+        startedAt: new Date("2026-04-27T00:00:00.000Z"),
+        attempts: [
+          {
+            attemptId: "attempt-1",
+            attemptNumber: 1,
+            sessionId: "session-attempt-1",
+            providerId: "provider-a",
+            modelId: "original-model",
+            status: "running",
+            startedAt: new Date("2026-04-27T00:00:00.000Z"),
+          },
+        ],
+        currentAttemptID: "attempt-1",
+      })
+
+      await tryFallbackRetry(args)
+
+      expect(args.task.attempts).toHaveLength(2)
+      expect(args.task.attempts?.[0]).toMatchObject({
+        attemptId: "attempt-1",
+        sessionId: "session-attempt-1",
+        status: "error",
+        error: "model overloaded",
+      })
+      expect(args.task.attempts?.[0]?.completedAt).toBeInstanceOf(Date)
+
+      const nextAttempt = args.task.attempts?.[1]
+      expect(nextAttempt).toBeDefined()
+      expect(nextAttempt?.attemptNumber).toBe(2)
+      expect(nextAttempt?.providerId).toBe("provider-a")
+      expect(nextAttempt?.modelId).toBe("fallback-model-1")
+      expect(nextAttempt?.status).toBe("pending")
+
+      expect(args.task.currentAttemptID).toBe(nextAttempt?.attemptId)
+      expect(args.task.status).toBe("pending")
+      expect(args.task.model).toEqual({
+        providerID: "provider-a",
+        modelID: "fallback-model-1",
+        variant: undefined,
+      })
+
+      const key = `${args.task.model!.providerID}/${args.task.model!.modelID}`
+      const queue = args.queuesByKey.get(key)
+      expect(queue).toBeDefined()
+      expect((queue?.[0] as QueueItem & { attemptID?: string })?.attemptID).toBe(nextAttempt?.attemptId)
     })
   })
 
@@ -312,7 +363,7 @@ describe("tryFallbackRetry", () => {
 
   describe("#given task without session", () => {
     test("skips session abort", async () => {
-      const args = createDefaultArgs({ sessionID: undefined })
+      const args = createDefaultArgs({ sessionId: undefined })
 
       await tryFallbackRetry(args)
 
@@ -338,6 +389,25 @@ describe("tryFallbackRetry", () => {
 
       await tryFallbackRetry(args)
 
+      expect(args.task.model?.modelID).toBe("fallback-model-2")
+      expect(args.task.attemptCount).toBe(2)
+    })
+  })
+
+  describe("#given first fallback is a no-op for the current model", () => {
+    test("skips the no-op fallback and advances to the next distinct model", async () => {
+      const args = createDefaultArgs({
+        model: { providerID: "provider-a", modelID: "fallback-model-1" },
+        fallbackChain: [
+          { model: "fallback-model-1", providers: ["provider-a"], variant: undefined },
+          { model: "fallback-model-2", providers: ["provider-b"], variant: undefined },
+        ],
+      })
+
+      const result = await tryFallbackRetry(args)
+
+      expect(result).toBe(true)
+      expect(args.task.model?.providerID).toBe("provider-b")
       expect(args.task.model?.modelID).toBe("fallback-model-2")
       expect(args.task.attemptCount).toBe(2)
     })

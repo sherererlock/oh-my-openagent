@@ -1,5 +1,5 @@
 import { initConfigContext } from "./cli/config-manager/config-context"
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Hooks, Plugin, PluginModule } from "@opencode-ai/plugin"
 
 import type { HookName } from "./config"
 
@@ -9,58 +9,50 @@ import { createRuntimeTmuxConfig, isTmuxIntegrationEnabled } from "./create-runt
 import { createTools } from "./create-tools"
 import { initializeOpenClaw } from "./openclaw"
 import { createPluginInterface } from "./plugin-interface"
-import { createPluginDispose, type PluginDispose } from "./plugin-dispose"
 
 import { loadPluginConfig } from "./plugin-config"
 import { createModelCacheState } from "./plugin-state"
 import { createFirstMessageVariantGate } from "./shared/first-message-variant"
 import { injectServerAuthIntoClient, log, logLegacyPluginStartupWarning } from "./shared"
+import { installAgentSortShim } from "./shared/agent-sort-shim"
 import { detectExternalSkillPlugin, getSkillPluginConflictWarning } from "./shared/external-plugin-detector"
 import { startBackgroundCheck as startTmuxCheck } from "./tools/interactive-bash"
-import { lspManager } from "./tools/lsp/client"
-import { createPluginPostHog, getPostHogDistinctId } from "./shared/posthog"
 
-let activePluginDispose: PluginDispose | null = null
-
-const OhMyOpenCodePlugin: Plugin = async (ctx) => {
+const serverPlugin: Plugin = async (input, _options): Promise<Hooks> => {
+  installAgentSortShim()
   initConfigContext("opencode", null)
-  log("[OhMyOpenCodePlugin] ENTRY - plugin loading", {
-    directory: ctx.directory,
+  log("[oh-my-openagent] ENTRY - plugin loading", {
+    directory: input.directory,
   })
   logLegacyPluginStartupWarning()
 
-  const skillPluginCheck = detectExternalSkillPlugin(ctx.directory)
+  const skillPluginCheck = detectExternalSkillPlugin(input.directory)
   if (skillPluginCheck.detected && skillPluginCheck.pluginName) {
     console.warn(getSkillPluginConflictWarning(skillPluginCheck.pluginName))
   }
 
-  injectServerAuthIntoClient(ctx.client)
-  await activePluginDispose?.()
+  injectServerAuthIntoClient(input.client)
 
-  const pluginConfig = loadPluginConfig(ctx.directory, ctx)
+  const pluginConfig = loadPluginConfig(input.directory, input)
 
-  const posthog = createPluginPostHog()
-  const distinctId = getPostHogDistinctId()
-  try {
-    posthog.trackActive(distinctId, "plugin_loaded")
-  } catch {
-    // telemetry failure is non-fatal, silently ignore
-  }
-  try {
-    posthog.capture({
-      distinctId,
-      event: "plugin_loaded",
-      properties: {
-        entry_point: "plugin",
-        has_openclaw: !!pluginConfig.openclaw,
-        tmux_enabled: isTmuxIntegrationEnabled(pluginConfig),
-      },
-    })
-  } catch {
-    // telemetry failure is non-fatal, silently ignore
-  }
   if (pluginConfig.openclaw) {
     await initializeOpenClaw(pluginConfig.openclaw)
+  }
+  if (pluginConfig.team_mode?.enabled) {
+    const teamModeConfig = pluginConfig.team_mode
+    try {
+      const { ensureBaseDirs, resolveBaseDir } = await import("./features/team-mode/team-registry/paths")
+      const { checkTeamModeDependencies } = await import("./features/team-mode/deps")
+      await checkTeamModeDependencies(teamModeConfig)
+      await ensureBaseDirs(resolveBaseDir(teamModeConfig))
+      if (pluginConfig.disabled_skills?.includes("team-mode")) {
+        console.warn(
+          "[team-mode] enabled=true but team-mode skill is disabled; skill docs hidden but tools still registered (D-29)",
+        )
+      }
+    } catch (err) {
+      console.warn("[team-mode] init failed:", err)
+    }
   }
   const tmuxIntegrationEnabled = isTmuxIntegrationEnabled(pluginConfig)
   if (tmuxIntegrationEnabled) {
@@ -78,7 +70,7 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
   const modelCacheState = createModelCacheState()
 
   const managers = createManagers({
-    ctx,
+    ctx: input,
     pluginConfig,
     tmuxConfig,
     modelCacheState,
@@ -86,31 +78,25 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
   })
 
   const toolsResult = await createTools({
-    ctx,
+    ctx: input,
     pluginConfig,
     managers,
   })
 
   const hooks = createHooks({
-    ctx,
+    ctx: input,
     pluginConfig,
     modelCacheState,
     backgroundManager: managers.backgroundManager,
+    modelFallbackControllerAccessor: managers.modelFallbackControllerAccessor,
     isHookEnabled,
     safeHookEnabled,
     mergedSkills: toolsResult.mergedSkills,
     availableSkills: toolsResult.availableSkills,
   })
 
-  const dispose = createPluginDispose({
-    backgroundManager: managers.backgroundManager,
-    skillMcpManager: managers.skillMcpManager,
-    lspManager,
-    disposeHooks: hooks.disposeHooks,
-  })
-
   const pluginInterface = createPluginInterface({
-    ctx,
+    ctx: input,
     pluginConfig,
     firstMessageVariantGate,
     managers,
@@ -118,30 +104,32 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     tools: toolsResult.filteredTools,
   })
 
-  activePluginDispose = dispose
-
   return {
-    name: "oh-my-openagent",
     ...pluginInterface,
 
     "experimental.session.compacting": async (
-      _input: { sessionID: string },
+      compactingInput: { sessionID: string },
       output: { context: string[] },
     ): Promise<void> => {
-      await hooks.compactionContextInjector?.capture(_input.sessionID)
-      await hooks.compactionTodoPreserver?.capture(_input.sessionID)
+      await hooks.compactionContextInjector?.capture(compactingInput.sessionID)
+      await hooks.compactionTodoPreserver?.capture(compactingInput.sessionID)
       await hooks.claudeCodeHooks?.["experimental.session.compacting"]?.(
-        _input,
+        compactingInput,
         output,
       )
       if (hooks.compactionContextInjector) {
-        output.context.push(hooks.compactionContextInjector.inject(_input.sessionID))
+        output.context.push(hooks.compactionContextInjector.inject(compactingInput.sessionID))
       }
     },
   }
 }
 
-export default OhMyOpenCodePlugin
+const pluginModule: PluginModule = {
+  id: "oh-my-openagent",
+  server: serverPlugin,
+}
+
+export default pluginModule
 
 export type {
   OhMyOpenCodeConfig,

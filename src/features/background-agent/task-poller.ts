@@ -58,6 +58,10 @@ export function pruneStaleTasksAndNotifications(args: {
       continue
     }
 
+    if (task.teamRunId) {
+      continue
+    }
+
     const lastActivity = task.status === "running" && task.progress?.lastUpdate
       ? task.progress.lastUpdate.getTime()
       : undefined
@@ -103,6 +107,7 @@ export type SessionStatusMap = Record<string, { type: string }>
 export async function checkAndInterruptStaleTasks(args: {
   tasks: Iterable<BackgroundTask>
   client: OpencodeClient
+  directory?: string
   config: BackgroundTaskConfig | undefined
   concurrencyManager: ConcurrencyManager
   notifyParentSession: (task: BackgroundTask) => Promise<void>
@@ -112,6 +117,7 @@ export async function checkAndInterruptStaleTasks(args: {
   const {
     tasks,
     client,
+    directory,
     config,
     concurrencyManager,
     notifyParentSession,
@@ -129,7 +135,7 @@ export async function checkAndInterruptStaleTasks(args: {
     if (task.status !== "running") continue
 
     const startedAt = task.startedAt
-    const sessionID = task.sessionID
+    const sessionID = task.sessionId
     if (!startedAt || !sessionID) continue
 
     const sessionStatus = sessionStatuses?.[sessionID]?.type
@@ -144,14 +150,16 @@ export async function checkAndInterruptStaleTasks(args: {
     }
 
     const sessionGone = sessionMissing && (task.consecutiveMissedPolls ?? 0) >= MIN_SESSION_GONE_POLLS
+    const shouldSkipInactivityTimeout = task.teamRunId !== undefined && !sessionGone
 
     if (!task.progress?.lastUpdate) {
+      if (shouldSkipInactivityTimeout) continue
       if (sessionIsRunning) continue
       if (sessionMissing && !sessionGone) continue
       const effectiveTimeout = sessionGone ? sessionGoneTimeoutMs : messageStalenessMs
       if (runtime <= effectiveTimeout) continue
 
-      if (sessionGone && await verifySessionExists(client, sessionID)) {
+      if (sessionGone && await verifySessionExists(client, sessionID, directory)) {
         task.consecutiveMissedPolls = 0
         continue
       }
@@ -181,6 +189,7 @@ export async function checkAndInterruptStaleTasks(args: {
     }
 
     if (sessionIsRunning) continue
+    if (shouldSkipInactivityTimeout) continue
 
     if (runtime < MIN_RUNTIME_BEFORE_STALE_MS) continue
 
@@ -189,7 +198,7 @@ export async function checkAndInterruptStaleTasks(args: {
     if (timeSinceLastUpdate <= effectiveStaleTimeout) continue
     if (task.status !== "running") continue
 
-    if (sessionGone && await verifySessionExists(client, sessionID)) {
+    if (sessionGone && await verifySessionExists(client, sessionID, directory)) {
       task.consecutiveMissedPolls = 0
       continue
     }

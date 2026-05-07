@@ -15,6 +15,19 @@ const readProviderModelsCacheMock = mock(
   } | null,
 )
 
+type ClaudeCodeAgentRecord = Record<
+  string,
+  {
+    description?: string
+    mode?: string
+    prompt?: string
+    model?: string | { providerID: string; modelID: string }
+  }
+>
+
+const loadUserAgentsMock = mock((): ClaudeCodeAgentRecord => ({}))
+const loadProjectAgentsMock = mock((_directory?: string): ClaudeCodeAgentRecord => ({}))
+
 async function importFreshSubagentResolverModule(): Promise<SubagentResolverModule> {
   return await import(`../subagent-resolver?test=${Date.now()}-${Math.random()}`)
 }
@@ -58,6 +71,10 @@ describe("resolveSubagentExecution", () => {
     readProviderModelsCacheMock.mockReset()
     readConnectedProvidersCacheMock.mockReturnValue(null)
     readProviderModelsCacheMock.mockReturnValue(null)
+    loadUserAgentsMock.mockReset()
+    loadProjectAgentsMock.mockReset()
+    loadUserAgentsMock.mockImplementation(() => ({}))
+    loadProjectAgentsMock.mockImplementation(() => ({}))
     mock.module("../../../shared/logger", () => ({
       log: logMock,
     }))
@@ -67,6 +84,14 @@ describe("resolveSubagentExecution", () => {
       hasConnectedProvidersCache: () => readConnectedProvidersCacheMock() !== null,
       hasProviderModelsCache: () => readProviderModelsCacheMock() !== null,
       _resetMemCacheForTesting: () => {},
+    }))
+    mock.module("../../../features/claude-code-agent-loader/loader", () => ({
+      loadUserAgents: loadUserAgentsMock,
+      loadProjectAgents: loadProjectAgentsMock,
+    }))
+    mock.module("../../../features/claude-code-agent-loader", () => ({
+      loadUserAgents: loadUserAgentsMock,
+      loadProjectAgents: loadProjectAgentsMock,
     }))
     ;({ resolveSubagentExecution } = await importFreshSubagentResolverModule())
   })
@@ -123,7 +148,87 @@ describe("resolveSubagentExecution", () => {
     //#then
     expect(result.agentToUse).toBe("")
     expect(result.categoryModel).toBeUndefined()
-    expect(result.error).toBe('Unknown agent: "sisyphus". Available agents: metis, oracle')
+    expect(result.error).toBe('Cannot delegate to primary agent "sisyphus" via task. Select that agent directly instead.')
+  })
+
+  test("returns explicit error for primary display-name agents", async () => {
+    //#given
+    const args = createBaseArgs({ subagent_type: "Prometheus - Plan Builder" })
+    const executorCtx = createExecutorContext(async () => ([
+      { name: "Prometheus - Plan Builder", mode: "primary" },
+      { name: "oracle", mode: "subagent" },
+    ]))
+
+    //#when
+    const result = await resolveSubagentExecution(args, executorCtx, "sisyphus", "deep")
+
+    //#then
+    expect(result.agentToUse).toBe("")
+    expect(result.categoryModel).toBeUndefined()
+    expect(result.error).toBe('Cannot delegate to primary agent "Prometheus - Plan Builder" via task. Select that agent directly instead.')
+  })
+
+  test("allows delegating to a primary agent when allowPrimaryAgentDelegation is enabled (team-mode path)", async () => {
+    //#given
+    readProviderModelsCacheMock.mockReturnValue({
+      models: { anthropic: ["claude-opus-4-7"] },
+      connected: ["anthropic"],
+      updatedAt: "2026-03-03T00:00:00.000Z",
+    })
+    const args = createBaseArgs({ subagent_type: "sisyphus" })
+    const executorCtx = createExecutorContext(async () => ([
+      { name: "\u200BSisyphus - Ultraworker", mode: "primary", model: "anthropic/claude-opus-4-7" },
+      { name: "oracle", mode: "subagent" },
+    ]))
+
+    //#when
+    const result = await resolveSubagentExecution(args, executorCtx, "sisyphus", "deep", {
+      allowPrimaryAgentDelegation: true,
+    })
+
+    //#then
+    expect(result.error).toBeUndefined()
+    expect(result.agentToUse).toBe("\u200BSisyphus - Ultraworker")
+  })
+
+  test("allows delegating to Sisyphus-Junior when allowSisyphusJuniorDirect is enabled (team-mode path)", async () => {
+    //#given
+    readProviderModelsCacheMock.mockReturnValue({
+      models: { anthropic: ["claude-sonnet-4-6"] },
+      connected: ["anthropic"],
+      updatedAt: "2026-03-03T00:00:00.000Z",
+    })
+    const args = createBaseArgs({ subagent_type: "sisyphus-junior" })
+    const executorCtx = createExecutorContext(async () => ([
+      { name: "Sisyphus-Junior", mode: "subagent", model: "anthropic/claude-sonnet-4-6" },
+      { name: "oracle", mode: "subagent" },
+    ]))
+
+    //#when
+    const result = await resolveSubagentExecution(args, executorCtx, "sisyphus", "deep", {
+      allowSisyphusJuniorDirect: true,
+    })
+
+    //#then
+    expect(result.error).toBeUndefined()
+    expect(result.agentToUse).toBe("Sisyphus-Junior")
+  })
+
+  test("renders a usable fallback hint when categoryExamples is empty for the default Sisyphus-Junior block", async () => {
+    //#given
+    const args = createBaseArgs({ subagent_type: "sisyphus-junior" })
+    const executorCtx = createExecutorContext(async () => ([
+      { name: "Sisyphus-Junior", mode: "subagent" },
+    ]))
+
+    //#when
+    const result = await resolveSubagentExecution(args, executorCtx, "sisyphus", "")
+
+    //#then
+    expect(result.agentToUse).toBe("")
+    expect(result.error).toBeDefined()
+    expect(result.error).not.toContain("(e.g., )")
+    expect(result.error).toContain("pick one of: quick, deep, ultrabrain")
   })
 
   test("requires explicit all or subagent mode for task-callable agents", async () => {
@@ -659,6 +764,148 @@ describe("resolveSubagentExecution", () => {
       thinking: { type: "disabled" },
     })
   })
+
+  test("resolves user agent from loadUserAgents when calling task(subagent_type=...)", async () => {
+    //#given
+    readProviderModelsCacheMock.mockReturnValue({
+      models: { openai: ["gpt-5.4"] },
+      connected: ["openai"],
+      updatedAt: "2026-03-03T00:00:00.000Z",
+    })
+    readConnectedProvidersCacheMock.mockReturnValue(["openai"])
+    loadUserAgentsMock.mockImplementation(() => ({
+      "my-user-agent": {
+        description: "A user agent",
+        mode: "subagent",
+        prompt: "Do something",
+        model: "openai/gpt-5.4",
+      },
+    }))
+    const args = createBaseArgs({ subagent_type: "my-user-agent" })
+    const executorCtx = createExecutorContext(async () => [])
+
+    //#when
+    const result = await resolveSubagentExecution(args, executorCtx, "sisyphus", "deep")
+
+    //#then
+    expect(result.error).toBeUndefined()
+    expect(result.agentToUse).toBe("my-user-agent")
+    expect(result.categoryModel?.modelID).toBe("gpt-5.4")
+  })
+
+  test("resolves project agent from loadProjectAgents when calling task(subagent_type=...)", async () => {
+    //#given
+    readProviderModelsCacheMock.mockReturnValue({
+      models: { anthropic: ["claude-sonnet-4"] },
+      connected: ["anthropic"],
+      updatedAt: "2026-03-03T00:00:00.000Z",
+    })
+    readConnectedProvidersCacheMock.mockReturnValue(["anthropic"])
+    loadProjectAgentsMock.mockImplementation(() => ({
+      "my-project-agent": {
+        description: "A project agent",
+        mode: "subagent",
+        prompt: "Do project work",
+        model: "anthropic/claude-sonnet-4",
+      },
+    }))
+    const args = createBaseArgs({ subagent_type: "my-project-agent" })
+    const executorCtx = createExecutorContext(async () => [])
+
+    //#when
+    const result = await resolveSubagentExecution(args, executorCtx, "sisyphus", "deep")
+
+    //#then
+    expect(result.error).toBeUndefined()
+    expect(result.agentToUse).toBe("my-project-agent")
+    expect(result.categoryModel?.modelID).toBe("claude-sonnet-4")
+  })
+
+  test("server agent takes precedence over user agent with same name", async () => {
+    //#given
+    readProviderModelsCacheMock.mockReturnValue({
+      models: { openai: ["gpt-5.4", "gpt-3.5"] },
+      connected: ["openai"],
+      updatedAt: "2026-03-03T00:00:00.000Z",
+    })
+    readConnectedProvidersCacheMock.mockReturnValue(["openai"])
+    loadUserAgentsMock.mockImplementation(() => ({
+      "explore": {
+        description: "User explore agent",
+        mode: "subagent",
+        prompt: "User prompt",
+        model: "openai/gpt-3.5",
+      },
+    }))
+    const args = createBaseArgs({ subagent_type: "explore" })
+    const executorCtx = createExecutorContext(async () => ([
+      { name: "explore", mode: "subagent", model: "openai/gpt-5.4" },
+    ]))
+
+    //#when
+    const result = await resolveSubagentExecution(args, executorCtx, "sisyphus", "deep")
+
+    //#then
+    expect(result.error).toBeUndefined()
+    expect(result.agentToUse).toBe("explore")
+    expect(result.categoryModel?.modelID).toBe("gpt-5.4")
+  })
+
+  test("project agent takes precedence over user agent with same name", async () => {
+    //#given
+    readProviderModelsCacheMock.mockReturnValue({
+      models: { minimaxi: ["MiniMax-M2.7-highspeed", "claude-3-haiku"] },
+      connected: ["minimaxi"],
+      updatedAt: "2026-03-03T00:00:00.000Z",
+    })
+    readConnectedProvidersCacheMock.mockReturnValue(["minimaxi"])
+    loadUserAgentsMock.mockImplementation(() => ({
+      "my-custom-agent": {
+        description: "User agent",
+        mode: "subagent",
+        prompt: "User prompt",
+        model: "minimaxi/claude-3-haiku",
+      },
+    }))
+    loadProjectAgentsMock.mockImplementation(() => ({
+      "my-custom-agent": {
+        description: "Project agent",
+        mode: "subagent",
+        prompt: "Project prompt",
+        model: "minimaxi/MiniMax-M2.7-highspeed",
+      },
+    }))
+    const args = createBaseArgs({ subagent_type: "my-custom-agent" })
+    const executorCtx = createExecutorContext(async () => [])
+
+    //#when
+    const result = await resolveSubagentExecution(args, executorCtx, "sisyphus", "deep")
+
+    //#then
+    expect(result.error).toBeUndefined()
+    expect(result.agentToUse).toBe("my-custom-agent")
+    expect(result.categoryModel?.modelID).toBe("MiniMax-M2.7-highspeed")
+  })
+
+  test("filters out primary agents from user/project when resolving", async () => {
+    //#given
+    loadUserAgentsMock.mockImplementation(() => ({
+      "my-primary-agent": {
+        description: "A primary agent",
+        mode: "primary",
+        prompt: "I am primary",
+      },
+    }))
+    const args = createBaseArgs({ subagent_type: "my-primary-agent" })
+    const executorCtx = createExecutorContext(async () => [])
+
+    //#when
+    const result = await resolveSubagentExecution(args, executorCtx, "sisyphus", "deep")
+
+    //#then
+    expect(result.error).toBe('Cannot delegate to primary agent "my-primary-agent" via task. Select that agent directly instead.')
+    expect(result.agentToUse).toBe("")
+  })
 })
 
 describe("resolveSubagentExecution - agent name sanitization", () => {
@@ -671,6 +918,10 @@ describe("resolveSubagentExecution - agent name sanitization", () => {
     readProviderModelsCacheMock.mockReset()
     readConnectedProvidersCacheMock.mockReturnValue(null)
     readProviderModelsCacheMock.mockReturnValue(null)
+    loadUserAgentsMock.mockReset()
+    loadProjectAgentsMock.mockReset()
+    loadUserAgentsMock.mockImplementation(() => ({}))
+    loadProjectAgentsMock.mockImplementation(() => ({}))
     mock.module("../../../shared/logger", () => ({
       log: logMock,
     }))
@@ -680,6 +931,14 @@ describe("resolveSubagentExecution - agent name sanitization", () => {
       hasConnectedProvidersCache: () => readConnectedProvidersCacheMock() !== null,
       hasProviderModelsCache: () => readProviderModelsCacheMock() !== null,
       _resetMemCacheForTesting: () => {},
+    }))
+    mock.module("../../../features/claude-code-agent-loader/loader", () => ({
+      loadUserAgents: loadUserAgentsMock,
+      loadProjectAgents: loadProjectAgentsMock,
+    }))
+    mock.module("../../../features/claude-code-agent-loader", () => ({
+      loadUserAgents: loadUserAgentsMock,
+      loadProjectAgents: loadProjectAgentsMock,
     }))
     ;({ resolveSubagentExecution } = await importFreshSubagentResolverModule())
   })
@@ -766,5 +1025,25 @@ describe("resolveSubagentExecution - agent name sanitization", () => {
     //#then
     expect(result.error).toBeUndefined()
     expect(result.agentToUse).toBe("Sisyphus - Ultraworker")
+  })
+
+  test("strips legacy ZWSP-prefixed agent names from persisted subagent runtime state (GH-3259)", async () => {
+    //#given - persisted runtime agent metadata from v3.14.0-v3.16.0 with ZWSP prefix
+    readProviderModelsCacheMock.mockReturnValue({
+      models: {},
+      connected: [],
+      updatedAt: "2026-03-03T00:00:00.000Z",
+    })
+    const args = createBaseArgs({ subagent_type: "Hephaestus - Deep Agent" })
+    const executorCtx = createExecutorContext(async () => ([
+      { name: "\u200B\u200BHephaestus - Deep Agent", mode: "subagent", model: "openai/gpt-5.3-codex" },
+    ]))
+
+    //#when
+    const result = await resolveSubagentExecution(args, executorCtx, "oracle", "deep")
+
+    //#then
+    expect(result.error).toBeUndefined()
+    expect(result.agentToUse).toBe("Hephaestus - Deep Agent")
   })
 })

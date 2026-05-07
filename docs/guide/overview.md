@@ -66,7 +66,7 @@ User Request
     └─→ [Category-based agents] — Specialized by task type
 ```
 
-When Sisyphus delegates to a subagent, it doesn't pick a model name. It picks a **category** — `visual-engineering`, `ultrabrain`, `quick`, `deep`. The category automatically maps to the right model. You touch nothing.
+When Sisyphus delegates to a subagent, it doesn't pick a model name. It picks a **category** — `visual-engineering`, `ultrabrain`, `deep`, `artistry`, `quick`, `unspecified-low`, `unspecified-high`, `writing`. The category automatically maps to the right model. You touch nothing.
 
 For a deep dive into how agents collaborate, see the [Orchestration System Guide](./orchestration.md).
 
@@ -82,26 +82,25 @@ Sisyphus is your main orchestrator. He plans, delegates to specialists, and driv
 
 **Recommended models:**
 
-- **Claude Opus 4.6** — Best overall experience. Sisyphus was built with Claude-optimized prompts.
-- **Claude Sonnet 4.6** — Good balance of capability and cost.
+- **Claude Opus 4.7** — Best overall experience. Sisyphus was built with Claude-optimized prompts.
 - **Kimi K2.5** — Great Claude-like alternative. Many users run this combo exclusively.
 - **GLM 5** — Solid option, especially via Z.ai.
 
-Sisyphus still works best on Claude-family models, Kimi, and GLM. GPT-5.4 now has a dedicated prompt path, but older GPT models are still a poor fit and should route to Hephaestus instead.
+Sisyphus works best on Claude Opus 4.7, Kimi K2.5, and GLM 5. GPT-5.4 and GPT-5.5 now have dedicated prompt paths, but older GPT models are still a poor fit and should route to Hephaestus instead.
 
 ### Hephaestus: The Legitimate Craftsman
 
 Named with intentional irony. Anthropic blocked OpenCode from using their API because of this project. So the team built an autonomous GPT-native agent instead.
 
-Hephaestus runs on GPT-5.4. Give him a goal, not a recipe. He explores the codebase, researches patterns, and executes end-to-end without hand-holding. He is the legitimate craftsman because he was born from necessity, not privilege.
+Hephaestus runs on GPT-5.5. Give him a goal, not a recipe. He explores the codebase, researches patterns, and executes end-to-end without hand-holding. He is the legitimate craftsman because he was born from necessity, not privilege.
 
-Use Hephaestus when you need deep architectural reasoning, complex debugging across many files, or cross-domain knowledge synthesis. Switch to him explicitly when the work demands GPT-5.4's particular strengths.
+Use Hephaestus when you need deep architectural reasoning, complex debugging across many files, or cross-domain knowledge synthesis. Switch to him explicitly when the work demands GPT-5.5's particular strengths.
 
 **Why this beats vanilla Codex CLI:**
 
 - **Multi-model orchestration.** Pure Codex is single-model. OmO routes different tasks to different models automatically. GPT for deep reasoning. Gemini for frontend. GPT-5.4 Mini for speed. The right brain for the right job.
 - **Background agents.** Fire 5+ agents in parallel. Something Codex simply cannot do. While one agent writes code, another researches patterns, another checks documentation. Like a real dev team.
-- **Category system.** Tasks are routed by intent, not model name. `visual-engineering` gets Gemini. `ultrabrain` gets GPT-5.4. `quick` gets GPT-5.4 Mini. No manual juggling.
+- **Category system.** Tasks are routed by intent, not model name. `visual-engineering` gets Gemini. `ultrabrain` gets GPT-5.5 xhigh. `deep` gets GPT-5.5. `artistry` gets Gemini. `quick` gets GPT-5.4 Mini. `unspecified-low` gets fast cheap models. `unspecified-high` gets Claude Opus. `writing` gets prose-optimized models. No manual juggling.
 - **Accumulated wisdom.** Subagents learn from previous results. Conventions discovered in task 1 are passed to task 5. Mistakes made early aren't repeated. The system gets smarter as it works.
 
 ### Prometheus: The Strategic Planner
@@ -174,7 +173,7 @@ You can override specific agents or categories in your config:
     // Main orchestrator: Claude Opus or Kimi K2.5 work best
     "sisyphus": {
       "model": "kimi-for-coding/k2p5",
-      "ultrawork": { "model": "anthropic/claude-opus-4-6", "variant": "max" },
+      "ultrawork": { "model": "anthropic/claude-opus-4-7", "variant": "max" },
     },
 
     // Research agents: cheaper models are fine
@@ -182,24 +181,36 @@ You can override specific agents or categories in your config:
     "explore": { "model": "github-copilot/grok-code-fast-1" },
 
     // Architecture consultation: GPT or Claude Opus
-    "oracle": { "model": "openai/gpt-5.4", "variant": "high" },
+    "oracle": { "model": "openai/gpt-5.5", "variant": "high" },
   },
 
   "categories": {
-    // Frontend work: Gemini dominates visual tasks
+    // Frontend/UI work: Gemini dominates visual tasks
     "visual-engineering": {
       "model": "google/gemini-3.1-pro",
       "variant": "high",
     },
 
-    // General high-effort work
-    "unspecified-high": { "model": "anthropic/claude-opus-4-6", "variant": "max" },
+    // Hard logic and architecture: GPT-5.5 xhigh
+    "ultrabrain": { "model": "openai/gpt-5.5", "variant": "xhigh" },
 
-    // Quick tasks: use GPT-5.4-mini (fast and cheap)
+    // Autonomous research and execution
+    "deep": { "model": "openai/gpt-5.5", "variant": "medium" },
+
+    // Creative and design work
+    "artistry": { "model": "google/gemini-3.1-pro", "variant": "high" },
+
+    // Quick tasks: fast and cheap
     "quick": { "model": "openai/gpt-5.4-mini" },
 
-    // Deep reasoning: GPT-5.4
-    "ultrabrain": { "model": "openai/gpt-5.4", "variant": "xhigh" },
+    // Low-effort fallback: cheapest available
+    "unspecified-low": { "model": "openai/gpt-5.4-mini" },
+
+    // High-effort fallback: best available
+    "unspecified-high": { "model": "anthropic/claude-opus-4-7", "variant": "max" },
+
+    // Prose and documentation
+    "writing": { "model": "anthropic/claude-opus-4-7", "variant": "high" },
   },
 }
 ```
@@ -208,14 +219,14 @@ You can override specific agents or categories in your config:
 
 **Claude-like models** (instruction-following, structured output):
 
-- Claude Opus 4.6, Claude Sonnet 4.6, Claude Haiku 4.5
+- Claude Opus 4.7, Claude Haiku 4.5
 - Kimi K2.5 — behaves very similarly to Claude
 - GLM 5 — Claude-like behavior, good for broad tasks
 
 **GPT models** (explicit reasoning, principle-driven):
 
-- GPT-5.4 — deep coding powerhouse, required for Hephaestus and default for Oracle
-- GPT-5-Nano — ultra-cheap, fast utility tasks
+- GPT-5.5 — deep coding powerhouse, required for Hephaestus and default for Oracle
+- GPT-5.4 Mini — fast and cheap utility tasks
 
 **Different-behavior models**:
 
@@ -264,6 +275,7 @@ Claude Code doesn't have this. It takes your prompt and runs. Oh My OpenAgent th
 - **[Installation Guide](./installation.md)** — Complete setup instructions, provider authentication, and troubleshooting
 - **[Orchestration Guide](./orchestration.md)** — Deep dive into agent collaboration, planning with Prometheus, and execution with Atlas
 - **[Agent-Model Matching Guide](./agent-model-matching.md)** — Which models work best for each agent and how to customize
+- **[Team Mode Guide](./team-mode.md)** — Parallel multi-agent coordination (OFF by default); 12 `team_*` tools, shared mailbox, shared task list, optional tmux layout
 - **[Configuration Reference](../reference/configuration.md)** — Full config options with examples
 - **[Features Reference](../reference/features.md)** — Complete feature documentation
 - **[Manifesto](../manifesto.md)** — Philosophy behind the project

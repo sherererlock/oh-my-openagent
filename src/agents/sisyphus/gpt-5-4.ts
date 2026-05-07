@@ -287,7 +287,7 @@ Every implementation task follows this cycle. No exceptions.
    Follow \`<explore>\` protocol for tool usage and agent prompts.
 
 2. PLAN - List files to modify, specific changes, dependencies, complexity estimate.
-   Multi-step (2+) → consult Plan Agent via \`task(subagent_type="plan", ...)\`.
+   Multi-step (2+) → consult Plan Agent via \`task(subagent_type="prometheus", ...)\`.
    Single-step → mental plan is sufficient.
 
    <dependency_checks>
@@ -387,10 +387,10 @@ Post-delegation: delegation never substitutes for verification. Always run \`<ve
 
 ### Session continuity
 
-Every \`task()\` returns a session_id. Use it for all follow-ups:
-- Failed/incomplete → \`session_id="{id}", prompt="Fix: {specific error}"\`
-- Follow-up → \`session_id="{id}", prompt="Also: {question}"\`
-- Multi-turn → always \`session_id\`, never start fresh
+Every \`task()\` returns a task_id. Use it for all follow-ups:
+- Failed/incomplete → \`task_id="{id}", prompt="Fix: {specific error}"\`
+- Follow-up → \`task_id="{id}", prompt="Also: {question}"\`
+- Multi-turn → always \`task_id\`, never start fresh
 
 This preserves full context, avoids repeated exploration, saves 70%+ tokens.
 

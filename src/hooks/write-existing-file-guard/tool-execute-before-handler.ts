@@ -44,6 +44,7 @@ function registerReadPermission(params: {
   readPermissionsBySession: Map<string, Set<string>>
   sessionLastAccess: Map<string, number>
   maxTrackedSessions: number
+  maxTrackedPathsPerSession: number
 }): void {
   const readSet = ensureSessionReadSet(params)
   if (readSet.has(params.canonicalPath)) {
@@ -51,7 +52,7 @@ function registerReadPermission(params: {
   }
 
   readSet.add(params.canonicalPath)
-  trimSessionReadSet(readSet, MAX_TRACKED_PATHS_PER_SESSION)
+  trimSessionReadSet(readSet, params.maxTrackedPathsPerSession)
 }
 
 function consumeReadPermission(params: {
@@ -90,10 +91,20 @@ export async function handleWriteExistingFileGuardToolExecuteBefore(params: {
   output: { args?: unknown }
   readPermissionsBySession: Map<string, Set<string>>
   sessionLastAccess: Map<string, number>
-  canonicalSessionRoot: string
+  getCanonicalSessionRoot: () => string
   maxTrackedSessions: number
+  maxTrackedPathsPerSession?: number
 }): Promise<void> {
-  const { ctx, input, output, readPermissionsBySession, sessionLastAccess, canonicalSessionRoot, maxTrackedSessions } = params
+  const {
+    ctx,
+    input,
+    output,
+    readPermissionsBySession,
+    sessionLastAccess,
+    getCanonicalSessionRoot,
+    maxTrackedSessions,
+    maxTrackedPathsPerSession = MAX_TRACKED_PATHS_PER_SESSION,
+  } = params
   const toolName = input.tool?.toLowerCase()
   if (toolName !== "write" && toolName !== "read") {
     return
@@ -107,6 +118,7 @@ export async function handleWriteExistingFileGuardToolExecuteBefore(params: {
   }
 
   const resolvedPath = resolveInputPath(ctx, filePath)
+  const canonicalSessionRoot = getCanonicalSessionRoot()
   const canonicalPath = toCanonicalPath(resolvedPath)
   if (!isPathInsideDirectory(canonicalPath, canonicalSessionRoot)) {
     return
@@ -123,6 +135,7 @@ export async function handleWriteExistingFileGuardToolExecuteBefore(params: {
       readPermissionsBySession,
       sessionLastAccess,
       maxTrackedSessions,
+      maxTrackedPathsPerSession,
     })
     return
   }

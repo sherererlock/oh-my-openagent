@@ -41,7 +41,7 @@ export function createBackgroundCancel(manager: BackgroundManager, _client: Back
               id: task.id,
               description: task.description,
               status: originalStatus === "pending" ? "pending" : "running",
-              sessionID: task.sessionID,
+              sessionID: task.sessionId,
             })
           }
 
@@ -59,7 +59,7 @@ export function createBackgroundCancel(manager: BackgroundManager, _client: Back
 
 To continue a cancelled task, use:
 \`\`\`
-task(session_id="<session_id>", prompt="Continue: <your follow-up>")
+task(task_id="<task_id>", prompt="Continue: <your follow-up>")
 \`\`\`
 
 Continuable sessions:
@@ -105,7 +105,7 @@ Status: ${task.status}`
 
 Task ID: ${task.id}
 Description: ${task.description}
-Session ID: ${task.sessionID}
+Session ID: ${task.sessionId}
 Status: ${task.status}`
       } catch (error) {
         return `[ERROR] Error cancelling task: ${error instanceof Error ? error.message : String(error)}`

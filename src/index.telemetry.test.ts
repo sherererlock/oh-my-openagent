@@ -29,18 +29,7 @@ const mockCreateHooks = mock(() => ({
   compactionTodoPreserver: undefined,
   claudeCodeHooks: undefined,
 }))
-const mockCreatePluginDispose = mock(() => async () => {})
 const mockCreatePluginInterface = mock(() => ({}))
-const mockCreatePluginPostHog = mock(() => ({
-  trackActive: () => {
-    throw new Error("telemetry failed")
-  },
-  capture: mock(() => {}),
-  captureException: mock(() => {}),
-  shutdown: mock(async () => {}),
-}))
-const mockGetPostHogDistinctId = mock(() => "plugin-distinct-id")
-
 function installModuleMocks(): void {
   mock.module("./cli/config-manager/config-context", () => ({
     initConfigContext: mockInitConfigContext,
@@ -70,9 +59,6 @@ function installModuleMocks(): void {
   mock.module("./create-hooks", () => ({
     createHooks: mockCreateHooks,
   }))
-  mock.module("./plugin-dispose", () => ({
-    createPluginDispose: mockCreatePluginDispose,
-  }))
   mock.module("./plugin-interface", () => ({
     createPluginInterface: mockCreatePluginInterface,
   }))
@@ -95,15 +81,18 @@ function installModuleMocks(): void {
     startBackgroundCheck: mock(() => {}),
   }))
   mock.module("./tools/lsp/client", () => ({
-    lspManager: {},
-  }))
-  mock.module("./shared/posthog", () => ({
-    createPluginPostHog: mockCreatePluginPostHog,
-    getPostHogDistinctId: mockGetPostHogDistinctId,
+    lspManager: {
+      getClient: mock(async () => ({
+        diagnostics: mock(async () => ({ items: [] })),
+      })),
+      stopAll: mock(async () => {}),
+      releaseClient: mock(() => {}),
+      cleanupTempDirectoryClients: mock(async () => {}),
+    },
   }))
 }
 
-describe("OhMyOpenCodePlugin telemetry isolation", () => {
+describe("oh-my-openagent telemetry isolation", () => {
   beforeEach(() => {
     mock.restore()
     installModuleMocks()
@@ -118,12 +107,13 @@ describe("OhMyOpenCodePlugin telemetry isolation", () => {
     const { default: plugin } = await import(`./index?telemetry=${Date.now()}-${Math.random()}`)
 
     // when
-    const result = await plugin({
+    const result = await plugin.server({
       directory: "/tmp/project",
       client: {},
-    } as Parameters<typeof plugin>[0])
+    } as Parameters<typeof plugin.server>[0])
 
     // then
-    expect(result).toMatchObject({ name: "oh-my-openagent" })
+    expect(typeof result).toBe("object")
+    expect(result).not.toBeNull()
   })
 })

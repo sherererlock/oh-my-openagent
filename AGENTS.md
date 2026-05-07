@@ -1,24 +1,24 @@
 # oh-my-opencode — OpenCode Plugin
 
-**Generated:** 2026-04-09 | **Commit:** dc7a4680 | **Branch:** dev
+**Generated:** 2026-04-18 | **Commit:** 2892ca4a | **Branch:** dev
 
 ## OVERVIEW
 
-OpenCode plugin (npm: `oh-my-opencode`) extending Claude Code with multi-agent orchestration, 52 lifecycle hooks, 26 tools, skill/command/MCP systems, Hashline edit tool, IntentGate classifier, and Claude Code compatibility. ~1600 TypeScript source files. Dual-published as `oh-my-opencode` + `oh-my-openagent` during transition.
+OpenCode plugin (npm: `oh-my-opencode`, dual-published as `oh-my-openagent` during transition) extending Claude Code with 11 agents, 52 lifecycle hooks, 26 tools, 3-tier MCP system (built-in + .mcp.json + skill-embedded), Hashline LINE#ID edit tool, IntentGate classifier, and Claude Code compatibility. 1766 TypeScript source files, 377k LOC, 104 barrel index.ts files. Entry: `src/index.ts` → 5-step init (loadConfig → createManagers → createTools → createHooks → createPluginInterface).
 
 ## STRUCTURE
 
 ```
 oh-my-opencode/
 ├── src/
-│   ├── index.ts              # Plugin entry: loadConfig → createManagers → createTools → createHooks → createPluginInterface
+│   ├── index.ts              # Plugin entry: default export `pluginModule`, shape `{ id, server }`
 │   ├── plugin-config.ts      # JSONC multi-level config: user → project → defaults (Zod v4)
 │   ├── agents/               # 11 agents (Sisyphus, Hephaestus, Oracle, Librarian, Explore, Atlas, Prometheus, Metis, Momus, Multimodal-Looker, Sisyphus-Junior)
 │   ├── hooks/                # 52 lifecycle hooks across dedicated modules and standalone files
 │   ├── tools/                # 26 tools across 16 directories (includes Hashline edit with LINE#ID content hashing)
-│   ├── features/             # 19 feature modules (background-agent, skill-loader, tmux, MCP-OAuth, skill-mcp-manager, etc.)
+│   ├── features/             # 20 feature modules (background-agent, skill-loader, tmux, MCP-OAuth, skill-mcp-manager, team-mode, etc.)
 │   ├── shared/               # 170+ utility files (barrel-exported, logger → /tmp/oh-my-opencode.log)
-│   ├── config/               # Zod v4 schema system (27 files)
+│   ├── config/               # Zod v4 schema system (32 files)
 │   ├── cli/                  # CLI: install, run, doctor, mcp-oauth (Commander.js)
 │   ├── mcp/                  # 3 built-in remote MCPs (websearch, context7, grep_app)
 │   ├── plugin/               # 10 OpenCode hook handlers + 52 hook composition
@@ -33,7 +33,7 @@ oh-my-opencode/
 ## INITIALIZATION FLOW
 
 ```
-OhMyOpenCodePlugin(ctx)
+pluginModule.server(input, options)
   ├─→ loadPluginConfig()         # JSONC parse → project/user merge → Zod validate → migrate
   ├─→ createManagers()           # TmuxSessionManager, BackgroundManager, SkillMcpManager, ConfigHandler
   ├─→ createTools()              # SkillContext + AvailableCategories + ToolRegistry (26 tools)
@@ -74,6 +74,7 @@ OhMyOpenCodePlugin(ctx)
 | Debug provider errors | `src/hooks/runtime-fallback/` | Reactive error recovery (distinct from model-fallback) |
 | External notifications | `src/openclaw/` | Bidirectional Discord/Telegram/webhook integration |
 | Skill-embedded MCP | `src/features/skill-mcp-manager/` | Tier 3 MCPs (stdio + HTTP, per-session) |
+| Team mode | `src/features/team-mode/` | Parallel multi-agent coordination (OFF by default) |
 
 ## MULTI-LEVEL CONFIG
 

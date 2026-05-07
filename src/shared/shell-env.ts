@@ -21,6 +21,13 @@ export function detectShellType(): ShellType {
     return "unix"
   }
 
+  // Git Bash on Windows sets MSYSTEM (e.g. "MINGW64", "MINGW32", "MSYS")
+  // even when SHELL is not set. Detect this before PSModulePath which is
+  // always present on Windows regardless of the active shell.
+  if (process.env.MSYSTEM) {
+    return "unix"
+  }
+
   if (process.env.PSModulePath) {
     return "powershell"
   }
@@ -165,4 +172,8 @@ export function shellEscapeForDoubleQuotedCommand(value: string): string {
     .replace(/#/g, "\\#") // escape hash (comment)
     .replace(/\(/g, "\\(") // escape parentheses
     .replace(/\)/g, "\\)") // escape parentheses
+}
+
+export function shellSingleQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`
 }

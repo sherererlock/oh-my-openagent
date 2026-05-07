@@ -32,10 +32,10 @@ export type ModelSettingsCompatibilityChange = {
   from: string
   to?: string
   reason:
-    | "unsupported-by-model-family"
-    | "unknown-model-family"
-    | "unsupported-by-model-metadata"
-    | "max-output-limit"
+  | "unsupported-by-model-family"
+  | "unknown-model-family"
+  | "unsupported-by-model-metadata"
+  | "max-output-limit"
 }
 
 export type ModelSettingsCompatibilityResult = {
@@ -49,7 +49,7 @@ export type ModelSettingsCompatibilityResult = {
 }
 
 const VARIANT_LADDER = ["low", "medium", "high", "xhigh", "max"]
-const REASONING_LADDER = ["none", "minimal", "low", "medium", "high", "xhigh"]
+const REASONING_LADDER = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
 
 function downgradeWithinLadder(value: string, allowed: string[], ladder: string[]): string | undefined {
   const requestedIndex = ladder.indexOf(value)
@@ -165,6 +165,7 @@ export function resolveCompatibleModelSettings(
   if (
     maxTokens !== undefined &&
     input.capabilities?.maxOutputTokens !== undefined &&
+    input.capabilities.maxOutputTokens > 0 &&
     maxTokens > input.capabilities.maxOutputTokens
   ) {
     changes.push({
