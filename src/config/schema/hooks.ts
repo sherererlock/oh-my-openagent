@@ -49,12 +49,15 @@ export const HookNameSchema = z.enum([
   "tasks-todowrite-disabler",
   "runtime-fallback",
   "write-existing-file-guard",
+  "notepad-write-guard",
   "bash-file-read-guard",
   "anthropic-effort",
   "hashline-read-enhancer",
   "read-image-resizer",
   "todo-description-override",
   "webfetch-redirect-guard",
+  "fsync-skip-warning",
+  "plan-format-validator",
   "legacy-plugin-toast",
 ])
 

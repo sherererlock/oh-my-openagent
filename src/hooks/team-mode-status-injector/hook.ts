@@ -1,4 +1,7 @@
+import type { KeywordDetectorConfig } from "../../config/schema/keyword-detector"
 import type { TeamModeConfig } from "../../config/schema/team-mode"
+import { isRealUserMessage } from "../../shared/internal-initiator-marker"
+import { detectKeywordsWithType, extractPromptText } from "../keyword-detector/detector"
 
 type TransformPart = {
   type: string
@@ -56,7 +59,8 @@ function resolveSessionID(
 
 function findLastUserMessageIndex(messages: MessageWithParts[]): number {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (messages[index]?.info.role === "user") {
+    const message = messages[index]
+    if (message?.info.role === "user") {
       return index
     }
   }
@@ -72,12 +76,33 @@ function hasInjectedTeamModeStatus(messages: MessageWithParts[]): boolean {
   )
 }
 
+function latestUserMessageRequestsTeamMode(
+  messages: MessageWithParts[],
+  userMessageIndex: number,
+  keywordDetectorConfig?: KeywordDetectorConfig,
+): boolean {
+  const message = messages[userMessageIndex]
+  if (message === undefined) {
+    return false
+  }
+  if (!isRealUserMessage(message)) {
+    return false
+  }
+
+  const promptText = extractPromptText(message.parts)
+  return detectKeywordsWithType(
+    promptText,
+    undefined,
+    undefined,
+    keywordDetectorConfig?.disabled_keywords,
+  ).some((keyword) => keyword.type === "team")
+}
+
 function buildTeamModeStatusContent(): string {
   return `${TEAM_MODE_STATUS_MARKER}
-Team mode is ENABLED for this session.
-If the team_* tools are present, that is authoritative proof that team mode is active.
-Do not inspect ~/.config/opencode or project config files to verify team mode.
-If you need usage guidance, load the team-mode skill. Otherwise use the team_* tools directly.
+Team mode is ENABLED for this session. Presence of the team_* tools is authoritative proof; do not inspect config files to verify.
+Closure invariant: every team you open is yours to close. After each team_task_update that completes or fails a task, call team_task_list({ teamRunId }); if every task is terminal, run team_shutdown_request + team_approve_shutdown per active member, then team_delete — in the same turn, without waiting for the user to ask. Lingering teams are a defect.
+Load the team-mode skill for the full Closure Contract and Closure Sequence.
 </team_mode_status>`
 }
 
@@ -93,6 +118,7 @@ function createInjectedMessage(sessionID: string): MessageWithParts {
 
 export function createTeamModeStatusInjector(
   config: TeamModeConfig,
+  keywordDetectorConfig?: KeywordDetectorConfig,
 ): TeamModeStatusInjectorHook {
   return {
     "experimental.chat.messages.transform": async (
@@ -113,12 +139,11 @@ export function createTeamModeStatusInjector(
       }
 
       const lastUserMessageIndex = findLastUserMessageIndex(output.messages)
-      const injectedMessage = createInjectedMessage(sessionID)
-
-      if (lastUserMessageIndex === -1) {
-        output.messages.unshift(injectedMessage)
+      if (!latestUserMessageRequestsTeamMode(output.messages, lastUserMessageIndex, keywordDetectorConfig)) {
         return
       }
+
+      const injectedMessage = createInjectedMessage(sessionID)
 
       output.messages.splice(lastUserMessageIndex, 0, injectedMessage)
     },

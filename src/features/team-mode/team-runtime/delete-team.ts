@@ -9,6 +9,7 @@ import { unregisterTeamSessionsByTeam } from "../team-session-registry"
 import { listActiveTeams, loadRuntimeState, saveRuntimeState, transitionRuntimeState } from "../team-state-store/store"
 import type { RuntimeState } from "../types"
 import { DELETABLE_MEMBER_STATUSES, removeWorktrees } from "./shutdown-helpers"
+import { unregisterTeamRunForSessionCleanup } from "./session-team-run-registry"
 
 export type DeleteTeamDeps = {
   canVisualize: typeof canVisualize
@@ -102,8 +103,11 @@ export async function deleteTeam(
   const removedLayout = config.tmux_visualization && tmuxMgr !== undefined && deps.canVisualize()
   if (removedLayout) {
     const memberPaneIds = runtimeState.members
-      .filter((member) => member.agentType !== "leader" && member.tmuxPaneId)
-      .map((member) => member.tmuxPaneId!)
+      .flatMap((member) => (
+        member.agentType !== "leader" && member.tmuxPaneId
+          ? [member.tmuxPaneId]
+          : []
+      ))
 
     const cleanupTarget = runtimeState.tmuxLayout
       ? {
@@ -139,6 +143,7 @@ export async function deleteTeam(
   await removeWorktrees([getRuntimeStateDir(resolveBaseDir(config), teamRunId)])
 
   unregisterTeamSessionsByTeam(teamRunId)
+  unregisterTeamRunForSessionCleanup(teamRunId)
 
   const activeTeams = await listActiveTeams(config)
   sweepStaleTeamSessions(new Set(activeTeams.map((team) => team.teamRunId))).catch(() => {})

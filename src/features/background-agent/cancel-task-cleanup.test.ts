@@ -11,11 +11,14 @@ afterEach(() => {
   while (managersToShutdown.length > 0) managersToShutdown.pop()?.shutdown()
 })
 
-function createBackgroundManager(config?: { defaultConcurrency?: number }): BackgroundManager {
+function createBackgroundManager(
+  config?: { defaultConcurrency?: number },
+  abortSession: () => Promise<unknown> = async () => ({ data: true }),
+): BackgroundManager {
   const directory = tmpdir()
   const client = { session: {} as PluginInput["client"]["session"] } as PluginInput["client"]
 
-  Reflect.set(client.session, "abort", async () => ({ data: true }))
+  Reflect.set(client.session, "abort", abortSession)
   Reflect.set(client.session, "create", async () => ({ data: { id: `session-${crypto.randomUUID().slice(0, 8)}` } }))
   Reflect.set(client.session, "get", async () => ({ data: { directory } }))
   Reflect.set(client.session, "messages", async () => ({ data: [] }))
@@ -107,7 +110,33 @@ describe("BackgroundManager.cancelTask cleanup", () => {
     expect(cancelled).toBe(true)
     expect(getPendingByParent(manager).get(task.parentSessionId)).toBeUndefined()
     runScheduledCleanup(manager, task.id)
-    expect(manager.getTask(task.id)).toBeUndefined()
+    expect(getTaskMap(manager).has(task.id)).toBe(false)
+    expect(manager.getTask(task.id)?.sessionId).toBe(task.sessionId)
+  })
+
+  test("#given running task abort returns SDK error #when cancelTask runs #then cancellation fails and task stays running", async () => {
+    // given
+    const manager = createBackgroundManager(undefined, async () => ({ error: { message: "session still active" } }))
+    const task = createMockTask({
+      id: "task-abort-error",
+      parentSessionId: "parent-session-abort-error",
+      sessionId: "session-abort-error",
+    })
+
+    getTaskMap(manager).set(task.id, task)
+    getPendingByParent(manager).set(task.parentSessionId, new Set([task.id]))
+
+    // when
+    const cancelled = await manager.cancelTask(task.id, {
+      skipNotification: true,
+      source: "test",
+    })
+
+    // then
+    expect(cancelled).toBe(false)
+    expect(task.status).toBe("running")
+    expect(getTaskMap(manager).get(task.id)).toBe(task)
+    expect(getPendingByParent(manager).get(task.parentSessionId)).toEqual(new Set([task.id]))
   })
 
   test("#given a running task #when cancelTask called with skipNotification=false #then task is also eventually removed", async () => {
@@ -131,7 +160,8 @@ describe("BackgroundManager.cancelTask cleanup", () => {
     // then
     expect(cancelled).toBe(true)
     runScheduledCleanup(manager, task.id)
-    expect(manager.getTask(task.id)).toBeUndefined()
+    expect(getTaskMap(manager).has(task.id)).toBe(false)
+    expect(manager.getTask(task.id)?.sessionId).toBe(task.sessionId)
   })
 
   test("#given a running task #when cancelTask called with skipNotification=true #then concurrency slot is freed and pending tasks can start", async () => {

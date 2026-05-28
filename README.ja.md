@@ -1,3 +1,8 @@
+> [!NOTE]
+> **マルチハーネスエージェントOSへのリファクタリング進行中**
+>
+> OpenCode、Codex、Piなどの複数エージェントハーネスをサポートするため、コードベースを再構成しています。貢献に興味がある方は、まず[ROADMAP](./ROADMAP.md)をご確認ください。ROADMAP関連のPRには`ROADMAP`ラベルを付けてください。
+
 > [!TIP]
 > **Building in Public**
 >
@@ -26,6 +31,8 @@
 
 <div align="center">
 
+<a href="https://github.com/code-yeongyu/oh-my-openagent#oh-my-openagent"><img src="./.github/assets/omo-logo.png" alt="OmO" width="200" /></a>
+
 [![Oh My OpenAgent](./.github/assets/hero.jpg)](https://github.com/code-yeongyu/oh-my-openagent#oh-my-openagent)
 
 [![Preview](./.github/assets/omo.png)](https://github.com/code-yeongyu/oh-my-openagent#oh-my-openagent)
@@ -43,13 +50,14 @@
 <div align="center">
 
 [![GitHub Release](https://img.shields.io/github/v/release/code-yeongyu/oh-my-openagent?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/releases)
-[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fohmyopenagent.com%2Fapi%2Fnpm-downloads&style=flat-square)](https://www.npmjs.com/package/oh-my-opencode)
+[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fomo.dev%2Fapi%2Fnpm-downloads&style=flat-square)](https://www.npmjs.com/package/oh-my-opencode)
 [![GitHub Contributors](https://img.shields.io/github/contributors/code-yeongyu/oh-my-openagent?color=c4f042&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/graphs/contributors)
 [![GitHub Forks](https://img.shields.io/github/forks/code-yeongyu/oh-my-openagent?color=8ae8ff&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/network/members)
 [![GitHub Stars](https://img.shields.io/github/stars/code-yeongyu/oh-my-openagent?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/stargazers)
 [![GitHub Issues](https://img.shields.io/github/issues/code-yeongyu/oh-my-openagent?color=ff80eb&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/issues)
 [![License](https://img.shields.io/badge/license-SUL--1.0-white?labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/LICENSE.md)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/code-yeongyu/oh-my-openagent)
+[![Docs](https://img.shields.io/badge/docs-omo.vibetip.help-369eff?labelColor=black&logo=readthedocs&logoColor=white&style=flat-square)](https://omo.vibetip.help/docs)
 
 [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [简体中文](README.zh-cn.md)
 
@@ -145,6 +153,7 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 |       | 機能                                                     | 何をするのか                                                                                                                                                                                                                   |
 | :---: | :------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |   🤖   | **規律あるエージェント (Discipline Agents)**             | Sisyphus が Hephaestus、Oracle、Librarian、Explore をオーケストレーションします。完全な AI 開発チームが並列で動きます。                                                                                                        |
+|   👥   | **Team Mode** (v4.0, オプトイン)                          | リードエージェント + 最大 8 メンバーの並列実行、リアルタイム tmux 可視化、専用 `team_*` ツール群。`hyperplan`(5 人の敵対的批評家)と `security-research`(3 人のハンター + 2 人の PoC エンジニア)を駆動します。[ドキュメント →](docs/guide/team-mode.md) |
 |   ⚡   | **`ultrawork` / `ulw`**                                  | 一言で OK。すべてのエージェントがアクティブになり、終わるまで止まりません。                                                                                                                                                    |
 |   🚪   | **[IntentGate](https://factory.ai/news/terminal-bench)** | ユーザーの真の意図を分析してから分類・行動します。もう文字通りに誤解して的外れなことをすることはありません。                                                                                                                   |
 |   🔗   | **ハッシュベースの編集ツール**                           | `LINE#ID` のコンテンツハッシュですべての変更を検証します。stale-line エラー 0%。[oh-my-pi](https://github.com/can1357/oh-my-pi) にインスパイアされています。[The Harness Problem →](https://blog.can.ac/2026/02/12/the-harness-problem/) |
@@ -169,7 +178,7 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 
 **Sisyphus** (`claude-opus-4-7` / **`kimi-k2.6`** / **`glm-5.1`**) はあなたのメインオーケストレーターです。計画を立て、専門家に委任し、攻撃的な並列実行でタスクを完了まで推進します。途中で投げ出すことはありません。
 
-**Hephaestus** (`gpt-5.4`) はあなたの自律的なディープワーカーです。レシピではなく、目標を与えてください。手取り足取り教えなくても、コードベースを探索し、パターンを調査し、エンドツーエンドで実行します。*正当なる職人 (The Legitimate Craftsman).*
+**Hephaestus** (`gpt-5.5`) はあなたの自律的なディープワーカーです。レシピではなく、目標を与えてください。手取り足取り教えなくても、コードベースを探索し、パターンを調査し、エンドツーエンドで実行します。*正当なる職人 (The Legitimate Craftsman).*
 
 **Prometheus** (`claude-opus-4-7` / **`kimi-k2.6`** / **`glm-5.1`**) はあなたの戦略プランナーです。インタビューモードで質問を投げ、スコープを特定し、コードに一行触れる前に詳細な計画を構築します。
 
@@ -177,7 +186,31 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 
 > Anthropic が [私たちのせいで OpenCode をブロックしました。](https://x.com/thdxr/status/2010149530486911014) だからこそ Hephaestus は「正当なる職人 (The Legitimate Craftsman)」と呼ばれているのです。皮肉を込めています。
 >
-> Opus で最もよく動きますが、Kimi K2.6 + GPT-5.4 の組み合わせだけでも、バニラの Claude Code を軽く凌駕します。設定は一切不要です。
+> Opus で最もよく動きますが、Kimi K2.6 + GPT-5.5 の組み合わせだけでも、バニラの Claude Code を軽く凌駕します。設定は一切不要です。
+
+### Team Mode (v4.0)
+
+エージェント 1 体でも速い。調和したチームは*圧倒的*です。
+
+**Team Mode** は oh-my-openagent を「サブエージェント付きの一体のエージェント」から、本物のマルチエージェントシステムへと変えます。リードエージェントがカテゴリ特化のメンバーチームを統括し、全員が**並列で**動き、専用ツール(`team_create`、`team_send_message`、`team_task_create`、`team_status`、…)で通信します。tmux レイアウトの focus + grid ウィンドウで、全メンバーの作業を同時に観察できます。
+
+```jsonc
+// .opencode/oh-my-openagent.jsonc
+{
+  "team_mode": {
+    "enabled": true,
+    "max_parallel_members": 4,
+    "tmux_visualization": true
+  }
+}
+```
+
+opencode を再起動すると `team_*` ツールファミリーが解放されます。すでに 2 つのスキルがその上に乗っています:
+
+- **`hyperplan`** — 5 人の敵対的エージェントが、一行のコードが書かれる前に直交する角度から計画を引き裂きます。
+- **`security-research`** — 3 人の脆弱性ハンター + 2 人の PoC エンジニアがコードベースを並列で監査。重大度は*実際の悪用可能性*で校正されます。
+
+> **デフォルトは OFF。必要なときに ON。** [Team Mode ガイド全文 →](docs/guide/team-mode.md)
 
 ### エージェントのオーケストレーション
 
@@ -190,7 +223,7 @@ Sisyphus がサブエージェントにタスクを委任する際、モデル�
 | `quick`              | 単一ファイルの変更、タイポの修正     |
 | `ultrabrain`         | ハードロジック、アーキテクチャの決定 |
 
-エージェントは作業の種類を伝えるだけで、ハーネスが適切なモデルを選びます。`ultrabrain` はデフォルトで GPT-5.4 xhigh にルーティングされるようになりました。あなたが触るものは何もありません。
+エージェントは作業の種類を伝えるだけで、ハーネスが適切なモデルを選びます。`ultrabrain` はデフォルトで GPT-5.5 xhigh にルーティングされるようになりました。あなたが触るものは何もありません。
 
 ### Claude Code 互換性
 
@@ -342,7 +375,7 @@ oh-my-openagent を削除するには:
 - **Sisyphus エージェント**: Prometheus (プランナー) と Metis (プランコンサルタント) を伴うメインオーケストレーター
 - **バックグラウンドタスク**: プロバイダー/モデル別の同時実行数を設定
 - **カテゴリー**: ドメイン別のタスク委任 (`visual`、`business-logic`、カスタム)
-- **フック**: 25 以上の組み込みフック。すべて `disabled_hooks` で制御可能
+- **フック**: 54 以上の組み込みライフサイクルフック（Team Mode 有効時は 61）。すべて `disabled_hooks` で制御可能
 - **MCP**: 組み込み websearch (Exa)、context7 (ドキュメント)、grep_app (GitHub 検索)
 - **LSP**: リファクタリングツールまで含む完全な LSP サポート
 - **Experimental**: 積極的な truncation、自動 resume など
@@ -393,5 +426,6 @@ OpenCode が Debian/Arch だとすれば、oh-my-openagent は Ubuntu/[Omarchy](
 - [Vercel](https://vercel.com)
 - [ELESTYLE](https://elestyle.jp)
   - マルチモバイル決済ゲートウェイ elepay、キャッシュレスソリューション向けモバイルアプリケーション SaaS OneQR の開発元。
+- [Deepgram](https://deepgram.com)
 
 *素晴らしいヒーロー画像を提供してくれた [@junhoyeo](https://github.com/junhoyeo) 氏に特別な感謝を。*

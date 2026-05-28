@@ -1,3 +1,8 @@
+> [!NOTE]
+> **正在进行多 Harness 代理操作系统重构**
+>
+> 我们正在重构代码库以支持多个代理 harness（OpenCode、Codex、Pi 等）。如果您有兴趣贡献，请先阅读 [ROADMAP](./ROADMAP.md)。与 ROADMAP 相关的 PR 请使用 `ROADMAP` 标签。
+
 > [!TIP]
 > **Building in Public**
 >
@@ -26,6 +31,8 @@
 
 <div align="center">
 
+<a href="https://github.com/code-yeongyu/oh-my-openagent#oh-my-openagent"><img src="./.github/assets/omo-logo.png" alt="OmO" width="200" /></a>
+
 [![Oh My OpenAgent](./.github/assets/hero.jpg)](https://github.com/code-yeongyu/oh-my-openagent#oh-my-openagent)
 
 [![Preview](./.github/assets/omo.png)](https://github.com/code-yeongyu/oh-my-openagent#oh-my-openagent)
@@ -43,13 +50,14 @@
 <div align="center">
 
 [![GitHub Release](https://img.shields.io/github/v/release/code-yeongyu/oh-my-openagent?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/releases)
-[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fohmyopenagent.com%2Fapi%2Fnpm-downloads&style=flat-square)](https://www.npmjs.com/package/oh-my-opencode)
+[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fomo.dev%2Fapi%2Fnpm-downloads&style=flat-square)](https://www.npmjs.com/package/oh-my-opencode)
 [![GitHub Contributors](https://img.shields.io/github/contributors/code-yeongyu/oh-my-openagent?color=c4f042&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/graphs/contributors)
 [![GitHub Forks](https://img.shields.io/github/forks/code-yeongyu/oh-my-openagent?color=8ae8ff&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/network/members)
 [![GitHub Stars](https://img.shields.io/github/stars/code-yeongyu/oh-my-openagent?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/stargazers)
 [![GitHub Issues](https://img.shields.io/github/issues/code-yeongyu/oh-my-openagent?color=ff80eb&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/issues)
 [![License](https://img.shields.io/badge/license-SUL--1.0-white?labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/LICENSE.md)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/code-yeongyu/oh-my-openagent)
+[![Docs](https://img.shields.io/badge/docs-omo.vibetip.help-369eff?labelColor=black&logo=readthedocs&logoColor=white&style=flat-square)](https://omo.vibetip.help/docs)
 
 [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [简体中文](README.zh-cn.md)
 
@@ -145,6 +153,7 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 |       | 特性                                                            | 功能说明                                                                                                                                                                        |
 | :---: | :-------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 |   🤖   | **自律军团 (Discipline Agents)**                                | Sisyphus 负责调度 Hephaestus、Oracle、Librarian 和 Explore。一支完整的 AI 开发团队并行工作。                                                                                    |
+|   👥   | **Team Mode** (v4.0, 选择性启用)                                 | 领导 Agent + 最多 8 个并行成员，实时 tmux 可视化，专用 `team_*` 工具家族。驱动 `hyperplan`(5 个敌对评论者) 和 `security-research`(3 个猎手 + 2 个 PoC 工程师)。[文档 →](docs/guide/team-mode.md) |
 |   ⚡   | **`ultrawork` / `ulw`**                                         | 一键触发，所有智能体出动。任务完成前绝不罢休。                                                                                                                                  |
 |   🚪   | **[IntentGate 意图门](https://factory.ai/news/terminal-bench)** | 真正行动前，先分析用户的真实意图。彻底告别被字面意思误导的 AI 废话。                                                                                                            |
 |   🔗   | **基于哈希的编辑工具**                                          | 每次修改都通过 `LINE#ID` 内容哈希验证、0% 错误修改。灵感来自 [oh-my-pi](https://github.com/can1357/oh-my-pi)。[The Harness Problem →](https://blog.can.ac/2026/02/12/the-harness-problem/) |
@@ -169,7 +178,7 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 
 **Sisyphus** (`claude-opus-4-7` / **`kimi-k2.6`** / **`glm-5.1`**) 是你的主指挥官。他负责制定计划、分配任务给专家团队，并以极其激进的并行策略推动任务直至完成。他从不半途而废。
 
-**Hephaestus** (`gpt-5.4`) 是你的自主深度工作者。你只需要给他目标，不要给他具体做法。他会自动探索代码库模式，从头到尾独立执行任务，绝不会中途要你当保姆。*名副其实的正牌工匠。*
+**Hephaestus** (`gpt-5.5`) 是你的自主深度工作者。你只需要给他目标，不要给他具体做法。他会自动探索代码库模式，从头到尾独立执行任务，绝不会中途要你当保姆。*名副其实的正牌工匠。*
 
 **Prometheus** (`claude-opus-4-7` / **`kimi-k2.6`** / **`glm-5.1`**) 是你的战略规划师。他通过访谈模式，在动一行代码之前，先通过提问确定范围并构建详尽的执行计划。
 
@@ -177,7 +186,31 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 
 > Anthropic [因为我们屏蔽了 OpenCode](https://x.com/thdxr/status/2010149530486911014)。这就是为什么我们将 Hephaestus 命名为"正牌工匠 (The Legitimate Craftsman)"。这是一个故意的讽刺。
 >
-> 我们在 Opus 上运行得最好，但仅仅使用 Kimi K2.5 + GPT-5.4 就足以碾压原版的 Claude Code。完全不需要配置。
+> 我们在 Opus 上运行得最好，但仅仅使用 Kimi K2.6 + GPT-5.5 就足以碾压原版的 Claude Code。完全不需要配置。
+
+### Team Mode (v4.0)
+
+一个 Agent 已经够快。一支协调的团队是 *毁灭性* 的。
+
+**Team Mode** 把 oh-my-openagent 从「带子 Agent 的单个 Agent」升级为真正的多 Agent 系统。一个领导 Agent 协调一队按类别专业化的成员，全部 **并行** 运行，通过专用工具(`team_create`、`team_send_message`、`team_task_create`、`team_status`、…)进行通信。在 tmux 布局的 focus + grid 窗口中同时观察每个成员的工作。
+
+```jsonc
+// .opencode/oh-my-openagent.jsonc
+{
+  "team_mode": {
+    "enabled": true,
+    "max_parallel_members": 4,
+    "tmux_visualization": true
+  }
+}
+```
+
+重启 opencode，`team_*` 工具家族就会解锁。已经有两个技能站在它之上:
+
+- **`hyperplan`** — 5 个敌对 Agent 在写下第一行代码之前，从正交角度撕碎你的计划。
+- **`security-research`** — 3 个漏洞猎手 + 2 个 PoC 工程师并行审计你的代码库。严重性按 *实际可利用性* 校准。
+
+> **默认关闭。需要时再开。** [Team Mode 完整指南 →](docs/guide/team-mode.md)
 
 ### 智能体调度机制
 
@@ -190,7 +223,7 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 | `quick`              | 单文件修改、修错字     |
 | `ultrabrain`         | 复杂硬核逻辑、架构决策 |
 
-智能体只需要说明要做什么类型的工作，框架就会挑选出最合适的模型去干。`ultrabrain` 现在默认路由到 GPT-5.4 xhigh。你完全不需要操心。
+智能体只需要说明要做什么类型的工作，框架就会挑选出最合适的模型去干。`ultrabrain` 现在默认路由到 GPT-5.5 xhigh。你完全不需要操心。
 
 ### 完全兼容 Claude Code
 
@@ -342,7 +375,7 @@ Agent 会自动顺藤摸瓜加载对应的 Context，免去了你所有的手动
 - **Sisyphus Agent**: 主调度器，搭配 Prometheus（规划师）和 Metis（计划顾问）
 - **后台任务**: 按 provider/model 配置并发上限
 - **类别**: 按领域的任务委托（`visual`、`business-logic`、自定义）
-- **Hooks**: 25+ 内置 Hook，都可以通过 `disabled_hooks` 控制
+- **Hooks**: 54+ 内置生命周期 Hook（启用 Team Mode 时为 61 个），都可以通过 `disabled_hooks` 控制
 - **MCPs**: 内置 websearch（Exa）、context7（文档）、grep_app（GitHub 检索）
 - **LSP**: 包括重构工具的完整 LSP 支持
 - **Experimental**: 激进截断、自动 resume 等
@@ -393,5 +426,6 @@ Agent 会自动顺藤摸瓜加载对应的 Context，免去了你所有的手动
 - [Vercel](https://vercel.com)
 - [ELESTYLE](https://elestyle.jp)
   - 开发了 elepay（全渠道移动支付网关）、OneQR（专为无现金社会打造的移动 SaaS 生态系统）。
+- [Deepgram](https://deepgram.com)
 
 *特别感谢 [@junhoyeo](https://github.com/junhoyeo) 为我们设计的令人惊艳的首图（Hero Image）。*

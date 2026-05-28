@@ -5,6 +5,9 @@ import { extractOracleSessionID, isOracleVerified } from "./oracle-verification-
 import type { RalphLoopState } from "./types"
 import { handleFailedVerification } from "./verification-failure-handler"
 import { withTimeout } from "./with-timeout"
+import type { IterationCommitExpectation } from "./types"
+
+export const STUCK_VERIFICATION_TIMEOUT_MS = 30 * 60 * 1000
 
 type OpenCodeSessionMessage = {
 	info?: { role?: string }
@@ -82,6 +85,9 @@ async function detectOracleVerificationFromParentSession(
 
 type LoopStateController = {
 	restartAfterFailedVerification: (sessionID: string, messageCountAtStart?: number) => RalphLoopState | null
+	clearVerificationState: (sessionID: string, messageCountAtStart?: number) => RalphLoopState | null
+	incrementIteration: (expected?: IterationCommitExpectation) => RalphLoopState | null
+	clear: () => boolean
 	setVerificationSessionID: (sessionID: string, verificationSessionID: string) => RalphLoopState | null
 }
 
@@ -130,6 +136,28 @@ export async function handlePendingVerification(
 					})
 					return
 				}
+			}
+		}
+
+		if (state.verification_attempt_id && !state.verification_session_id) {
+			const startedAt = state.verification_attempt_started_at
+			const attemptAgeMs = startedAt !== undefined ? Date.now() - startedAt : undefined
+			const isStuck = attemptAgeMs !== undefined && attemptAgeMs > STUCK_VERIFICATION_TIMEOUT_MS
+
+			if (isStuck) {
+				log(`[${HOOK_NAME}] Stuck oracle dispatch detected, proceeding to failure handler`, {
+					sessionID,
+					verificationAttemptId: state.verification_attempt_id,
+					attemptAgeMs,
+					iteration: state.iteration,
+				})
+			} else {
+				log(`[${HOOK_NAME}] Skipped verification failure: oracle dispatch in flight`, {
+					sessionID,
+					verificationAttemptId: state.verification_attempt_id,
+					iteration: state.iteration,
+				})
+				return
 			}
 		}
 

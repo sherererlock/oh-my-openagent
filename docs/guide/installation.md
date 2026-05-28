@@ -15,12 +15,13 @@ Run the interactive installer:
 
 ```bash
 bunx oh-my-openagent install # recommended
-npx oh-my-openagent install # alternative
 ```
+
+Use Bun only for installation. Do not use npm, yarn, or pnpm.
 
 > **Note**: The CLI ships with standalone binaries for all major platforms. No runtime (Bun/Node.js) is required for CLI execution after installation.
 >
-> **Supported platforms**: macOS (ARM64, x64), Linux (x64, ARM64, Alpine/musl), Windows (x64)
+> **Supported platforms**: 11 platform binaries across macOS (ARM64, x64, x64-baseline), Linux (x64, x64-baseline, x64-musl, x64-musl-baseline, ARM64, ARM64-musl), and Windows (x64, x64-baseline)
 
 Follow the prompts to configure your Claude, ChatGPT, and Gemini subscriptions. After installation, authenticate your providers as instructed.
 
@@ -28,7 +29,23 @@ Anonymous telemetry is enabled by default to track active installations (DAU/WAU
 
 After you install it, you can read this [overview guide](./overview.md) to understand more.
 
-The published package and local binary are still `oh-my-opencode`. Inside `opencode.json`, the compatibility layer now prefers the plugin entry `oh-my-openagent`, while legacy `oh-my-opencode` entries still load with a warning. Plugin config loading recognizes both `oh-my-openagent.json[c]` and `oh-my-opencode.json[c]` during the transition. If you see a "Using legacy package name" warning from `bunx oh-my-openagent doctor`, update your `opencode.json` plugin entry from `"oh-my-opencode"` to `"oh-my-openagent"`.
+The project is dual-published during the rename transition: `oh-my-openagent` and `oh-my-opencode` are both published package names. Inside `opencode.json`, the compatibility layer now prefers the plugin entry `oh-my-openagent`, while legacy `oh-my-opencode` entries still load with a warning. Plugin config loading recognizes both `oh-my-openagent.json[c]` and `oh-my-opencode.json[c]` during the transition. If you see a "Using legacy package name" warning from `bunx oh-my-openagent doctor`, update your `opencode.json` plugin entry from `"oh-my-opencode"` to `"oh-my-openagent"`.
+
+Postinstall validates both platform binary resolution and OpenCode version compatibility.
+
+Core CLI subcommands are: `install`, `run`, `doctor`, `mcp-oauth`, `refresh-model-capabilities`, and `get-local-version`.
+
+Config schema URL:
+
+```json
+"$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json"
+```
+
+Operational notes:
+
+- Claude Code compatibility is supported.
+- Claude Code plugin discovery load timeout is 10 seconds.
+- Runtime logger path: `/tmp/oh-my-opencode.log`
 
 ## For LLM Agents
 
@@ -73,7 +90,7 @@ Ask the user these questions to determine CLI options:
    - If **no** → `--zai-coding-plan=no` (default)
 
 7. **Do you have an OpenCode Go subscription?**
-   - OpenCode Go is a $10/month subscription providing access to GLM-5, Kimi K2.5, and MiniMax M2.7 models
+   - OpenCode Go is a $10/month subscription providing access to GLM-5/5.1, Kimi K2.5/K2.6, and MiniMax M2.7 models
    - If **yes** → `--opencode-go=yes`
    - If **no** → `--opencode-go=no` (default)
 
@@ -291,8 +308,8 @@ Not all models behave the same way. Understanding which models are "similar" hel
 | **Claude Opus 4.7**      | anthropic, github-copilot, opencode | Best overall. Default for Sisyphus.                                     |
 | **Claude Sonnet 4.6**    | anthropic, github-copilot, opencode | Faster, cheaper. Good balance.                                          |
 | **Claude Haiku 4.5**     | anthropic, opencode                 | Fast and cheap. Good for quick tasks.                                   |
-| **Kimi K2.6**            | opencode-go, vercel                  | Behaves very similarly to Claude. Great all-rounder that appears in several orchestration fallback chains. |
-| **Kimi K2.5**            | kimi-for-coding, opencode, moonshotai, moonshotai-cn, firmware, ollama-cloud, aihubmix | Claude-like behavior. Available on multiple providers.                    |
+| **Kimi K2.6**            | opencode-go, vercel                 | Current default fallback after Claude Opus in primary Sisyphus chain. Claude-like behavior. |
+| **Kimi K2.5**            | kimi-for-coding, opencode, moonshotai, moonshotai-cn, firmware, ollama-cloud, aihubmix | Claude-like behavior. Available on multiple providers. Still in active fallback chains. |
 | **Kimi K2.5 Free**       | opencode                            | Free-tier Kimi. Rate-limited but functional.                            |
 | **GLM 5.1**              | opencode-go, vercel                 | Claude-like behavior. Upgraded from GLM-5 on opencode-go.              |
 | **GLM 5**                | zai-coding-plan, opencode           | Claude-like behavior. Good for broad tasks.                             |
@@ -335,7 +352,7 @@ Based on your subscriptions, here's how the agents were configured:
 | Agent        | Role             | Default Chain                                   | What It Does                                                                             |
 | ------------ | ---------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | **Sisyphus** | Main ultraworker | anthropic\|github-copilot\|opencode/claude-opus-4-7 (max) → opencode-go/kimi-k2.6 → kimi-for-coding/k2p5 → opencode\|moonshotai\|moonshotai-cn\|firmware\|ollama-cloud\|aihubmix/kimi-k2.5 → openai\|github-copilot\|opencode/gpt-5.5 (medium) → zai-coding-plan\|opencode/glm-5 → opencode/big-pickle | Primary coding agent. Exact runtime chain from `src/shared/model-requirements.ts`. |
-| **Metis**    | Plan review      | anthropic\|github-copilot\|opencode/claude-opus-4-7 (max) → openai\|github-copilot\|opencode/gpt-5.5 (high) → opencode-go/glm-5.1 → kimi-for-coding/k2p5 | Reviews Prometheus plans for gaps. Exact runtime chain from `src/shared/model-requirements.ts`. |
+| **Metis**    | Plan review      | anthropic\|github-copilot\|opencode/claude-sonnet-4-6 → anthropic\|github-copilot\|opencode/claude-opus-4-7 (max) → openai\|github-copilot\|opencode/gpt-5.5 (high) → opencode-go/glm-5.1 → kimi-for-coding/k2p5 | Reviews Prometheus plans for gaps. Exact runtime chain from `src/shared/model-requirements.ts`. |
 
 **Dual-Prompt Agents** (auto-switch between Claude and GPT prompts):
 
@@ -399,7 +416,7 @@ If the user wants to override which model an agent uses, you can customize in yo
 When choosing models for Claude-optimized agents:
 
 ```
-Claude (Opus/Sonnet) > GPT (if agent has dual prompt) > Claude-like (Kimi K2.5, GLM 5)
+Claude (Opus/Sonnet) > GPT (if agent has dual prompt) > Claude-like (Kimi K2.6, K2.5, GLM 5/5.1)
 ```
 
 When choosing models for GPT-native agents:
@@ -412,9 +429,9 @@ GPT (5.3-codex, 5.2) > Claude Opus (decent fallback) > Gemini (acceptable)
 
 **Safe** (same family):
 
-- Sisyphus: Opus → Sonnet, Kimi K2.5, GLM 5
+- Sisyphus: Opus → Sonnet, Kimi K2.6 (then K2.5), GLM 5/5.1
 - Prometheus: Opus → GPT-5.5 (auto-switches prompt)
-- Atlas: Kimi K2.5 → Sonnet, GPT-5.5 (auto-switches)
+- Atlas: Kimi K2.6 → Sonnet, GPT-5.5 (auto-switches)
 
 **Dangerous** (no prompt support):
 

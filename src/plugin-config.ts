@@ -6,7 +6,7 @@ import {
   log,
   containsPath,
   deepMerge,
-  getOpenCodeConfigDir,
+  getOpenCodeConfigDirs,
   addConfigLoadError,
   parseJsonc,
   detectPluginConfigFile,
@@ -16,6 +16,51 @@ import {
 } from "./shared";
 import { migrateLegacyConfigFile } from "./shared/migrate-legacy-config-file";
 import { CONFIG_BASENAME, LEGACY_CONFIG_BASENAME } from "./shared/plugin-identity";
+import { validateAgentOrder } from "./shared/agent-ordering";
+import { applyDisabledProviders } from "./shared/disabled-providers";
+
+const CONTROL_CHARACTERS_REGEX = /[\u0000-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069]/g;
+const MAX_AGENT_ORDER_WARNING_VALUES = 10;
+const MAX_AGENT_ORDER_WARNING_VALUE_LENGTH = 80;
+
+function formatAgentOrderWarningValues(values: readonly string[]): string {
+  const displayedValues = values.slice(0, MAX_AGENT_ORDER_WARNING_VALUES).map((value) => {
+    const sanitized = value.replace(CONTROL_CHARACTERS_REGEX, "");
+    const truncated = sanitized.length > MAX_AGENT_ORDER_WARNING_VALUE_LENGTH
+      ? `${sanitized.slice(0, MAX_AGENT_ORDER_WARNING_VALUE_LENGTH)}...`
+      : sanitized;
+    return JSON.stringify(truncated);
+  });
+
+  const remaining = values.length - displayedValues.length;
+  if (remaining > 0) {
+    displayedValues.push(`(+${remaining} more)`);
+  }
+
+  return displayedValues.join(", ");
+}
+
+function addAgentOrderWarnings(configPath: string, agentOrder: string[] | undefined): void {
+  if (!agentOrder) return;
+
+  const validation = validateAgentOrder(agentOrder);
+  const messages: string[] = [];
+
+  if (validation.invalid.length > 0) {
+    messages.push(`unknown agent names ignored: ${formatAgentOrderWarningValues(validation.invalid)}`);
+  }
+
+  if (validation.duplicates.length > 0) {
+    messages.push(`duplicate agent names ignored: ${formatAgentOrderWarningValues(validation.duplicates)}`);
+  }
+
+  if (messages.length === 0) return;
+
+  addConfigLoadError({
+    path: configPath,
+    error: `agent_order warning - ${messages.join("; ")}`,
+  });
+}
 
 function resolveHomeDirectory(): string {
   // Read env vars directly to bypass os.homedir() caching. Bun caches the
@@ -72,6 +117,7 @@ const PARTIAL_STRING_ARRAY_KEYS = new Set([
   "disabled_hooks",
   "disabled_commands",
   "disabled_tools",
+  "disabled_providers",
   "mcp_env_allowlist",
   "agent_definitions",
 ]);
@@ -134,7 +180,11 @@ export function loadConfigFromPath(
       const result = OhMyOpenCodeConfigSchema.safeParse(rawConfig);
 
       if (result.success) {
-        log(`Config loaded from ${configPath}`, { agents: result.data.agents });
+        addAgentOrderWarnings(configPath, result.data.agent_order);
+        log(`Config loaded from ${configPath}`, {
+          agents: result.data.agents,
+          team_mode: result.data.team_mode,
+        });
         return result.data;
       }
 
@@ -149,7 +199,11 @@ export function loadConfigFromPath(
 
       const partialResult = parseConfigPartially(rawConfig);
       if (partialResult) {
-        log(`Partial config loaded from ${configPath}`, { agents: partialResult.agents });
+        addAgentOrderWarnings(configPath, partialResult.agent_order);
+        log(`Partial config loaded from ${configPath}`, {
+          agents: partialResult.agents,
+          team_mode: partialResult.team_mode,
+        });
         return partialResult;
       }
 
@@ -161,6 +215,18 @@ export function loadConfigFromPath(
     addConfigLoadError({ path: configPath, error: errorMsg });
   }
   return null;
+}
+
+function dedupeCaseInsensitive(values: readonly string[]): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const value of values) {
+    const key = value.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(value)
+  }
+  return result
 }
 
 export function mergeConfigs(
@@ -215,6 +281,10 @@ export function mergeConfigs(
         ...(override.disabled_tools ?? []),
       ]),
     ],
+    disabled_providers: dedupeCaseInsensitive([
+      ...(base.disabled_providers ?? []),
+      ...(override.disabled_providers ?? []),
+    ]),
     mcp_env_allowlist: [
       ...new Set([
         ...(base.mcp_env_allowlist ?? []),
@@ -229,25 +299,26 @@ export function loadPluginConfig(
   directory: string,
   ctx: unknown
 ): OhMyOpenCodeConfig {
-  // User-level config path - prefer .jsonc over .json
-  const configDir = getOpenCodeConfigDir({ binary: "opencode" });
-  const userDetected = detectPluginConfigFile(configDir);
-  let userConfigPath =
-    userDetected.format !== "none"
-      ? userDetected.path
-      : path.join(configDir, `${CONFIG_BASENAME}.json`);
+  const userConfigDirs = [...getOpenCodeConfigDirs({ binary: "opencode" })].reverse()
+  const userConfigLayers = userConfigDirs.map((configDir) => {
+    const detected = detectPluginConfigFile(configDir, {
+      basenames: [CONFIG_BASENAME],
+      legacyBasenames: [LEGACY_CONFIG_BASENAME],
+    })
 
-  if (userDetected.legacyPath) {
-    log("Canonical plugin config detected alongside legacy config. Remove the legacy file to avoid confusion.", {
-      canonicalPath: userDetected.path,
-      legacyPath: userDetected.legacyPath,
-    });
-  }
+    if (detected.legacyPath) {
+      log("Canonical plugin config detected alongside legacy config. Remove the legacy file to avoid confusion.", {
+        canonicalPath: detected.path,
+        legacyPath: detected.legacyPath,
+      })
+    }
 
-  // Auto-copy legacy config file to canonical name if needed
-  if (userDetected.format !== "none") {
-    userConfigPath = resolveConfigPathAfterLegacyMigration(userConfigPath)
-  }
+    const configPath = detected.format !== "none"
+      ? resolveConfigPathAfterLegacyMigration(detected.path)
+      : null
+
+    return { configDir, configPath }
+  })
 
   // Pin the walk to $HOME only when the start directory is inside it. Outside
   // $HOME the walker would otherwise reach FS root and surface unrelated configs
@@ -268,7 +339,10 @@ export function loadPluginConfig(
   const canonicalAncestorPathsNearestFirst = ancestorConfigPathsNearestFirst.map(
     (ancestorPath) => {
       const opencodeDir = path.dirname(ancestorPath)
-      const ancestorDetected = detectPluginConfigFile(opencodeDir)
+      const ancestorDetected = detectPluginConfigFile(opencodeDir, {
+        basenames: [CONFIG_BASENAME],
+        legacyBasenames: [LEGACY_CONFIG_BASENAME],
+      })
       if (ancestorDetected.legacyPath) {
         log("Canonical plugin config detected alongside legacy config. Remove the legacy file to avoid confusion.", {
           canonicalPath: ancestorDetected.path,
@@ -279,20 +353,36 @@ export function loadPluginConfig(
     },
   )
 
-  // Load user config first (base). Parse empty config through Zod to apply field defaults.
-  const userConfig = loadConfigFromPath(userConfigPath, ctx)
-  const userGitMasterOverrides = loadExplicitGitMasterOverrides(userConfigPath)
+  let config: OhMyOpenCodeConfig = OhMyOpenCodeConfigSchema.parse({})
+  let mergedUserGitMasterOverrides: Record<string, unknown> | null = null
 
-  if (userConfig?.agent_definitions) {
-    userConfig.agent_definitions = resolveAgentDefinitionPaths(
-      userConfig.agent_definitions,
-      configDir,
-      null
-    )
+  for (const userLayer of userConfigLayers) {
+    if (!userLayer.configPath) continue
+
+    const userConfig = loadConfigFromPath(userLayer.configPath, ctx)
+    const userGitMasterOverrides = loadExplicitGitMasterOverrides(userLayer.configPath)
+
+    if (userConfig?.agent_definitions) {
+      userConfig.agent_definitions = resolveAgentDefinitionPaths(
+        userConfig.agent_definitions,
+        userLayer.configDir,
+        null,
+      )
+    }
+
+    if (userConfig) {
+      config = mergeConfigs(config, userConfig)
+    }
+
+    if (userGitMasterOverrides) {
+      mergedUserGitMasterOverrides = {
+        ...(mergedUserGitMasterOverrides ?? {}),
+        ...userGitMasterOverrides,
+      }
+    }
   }
 
-  let config: OhMyOpenCodeConfig =
-    userConfig ?? OhMyOpenCodeConfigSchema.parse({});
+  const userMcpEnvAllowlist = config.mcp_env_allowlist ?? []
 
   const canonicalAncestorPathsFarthestFirst = [...canonicalAncestorPathsNearestFirst].reverse()
   const defaultGitMaster = OhMyOpenCodeConfigSchema.parse({}).git_master
@@ -322,7 +412,7 @@ export function loadPluginConfig(
     }
   }
 
-  if (userGitMasterOverrides || ancestorGitMasterOverridesFarthestFirst.length > 0) {
+  if (mergedUserGitMasterOverrides || ancestorGitMasterOverridesFarthestFirst.length > 0) {
     const mergedAncestorGitMaster: Record<string, unknown> = {}
     for (const override of ancestorGitMasterOverridesFarthestFirst) {
       Object.assign(mergedAncestorGitMaster, override)
@@ -331,7 +421,7 @@ export function loadPluginConfig(
       ...config,
       git_master: {
         ...defaultGitMaster,
-        ...(userGitMasterOverrides ?? {}),
+        ...(mergedUserGitMasterOverrides ?? {}),
         ...mergedAncestorGitMaster,
       },
     }
@@ -343,14 +433,18 @@ export function loadPluginConfig(
   // expansion in .mcp.json files. See commit 316d2504 for context.
   config = {
     ...config,
-    mcp_env_allowlist: userConfig?.mcp_env_allowlist ?? [],
+    mcp_env_allowlist: userMcpEnvAllowlist,
   };
+
+  applyDisabledProviders(config);
 
   log("Final merged config", {
     agents: config.agents,
+    team_mode: config.team_mode,
     disabled_agents: config.disabled_agents,
     disabled_mcps: config.disabled_mcps,
     disabled_hooks: config.disabled_hooks,
+    disabled_providers: config.disabled_providers,
     claude_code: config.claude_code,
   });
   return config;

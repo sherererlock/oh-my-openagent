@@ -54,7 +54,7 @@ Instead of one agent doing everything, Oh My OpenAgent uses **specialized agents
 ```
 User Request
     ↓
-[Intent Gate] — Classifies what you actually want
+[IntentGate] — Classifies what you actually want
     ↓
 [Sisyphus] — Main orchestrator, plans and delegates
     ↓
@@ -83,10 +83,10 @@ Sisyphus is your main orchestrator. He plans, delegates to specialists, and driv
 **Recommended models:**
 
 - **Claude Opus 4.7** — Best overall experience. Sisyphus was built with Claude-optimized prompts.
-- **Kimi K2.5** — Great Claude-like alternative. Many users run this combo exclusively.
+- **Kimi K2.6** / **K2.5** — Great Claude-like alternatives. K2.6 is the current default fallback in the primary Sisyphus chain; many users run K2.6 or the K2.5/K2.6 combo exclusively.
 - **GLM 5** — Solid option, especially via Z.ai.
 
-Sisyphus works best on Claude Opus 4.7, Kimi K2.5, and GLM 5. GPT-5.4 and GPT-5.5 now have dedicated prompt paths, but older GPT models are still a poor fit and should route to Hephaestus instead.
+Sisyphus works best on Claude Opus 4.7, Kimi K2.6 (or K2.5), and GLM 5.1. GPT-5.4 and GPT-5.5 now have dedicated prompt paths, but older GPT models are still a poor fit and should route to Hephaestus instead.
 
 ### Hephaestus: The Legitimate Craftsman
 
@@ -167,10 +167,10 @@ You can override specific agents or categories in your config:
 
 ```jsonc
 {
-  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-openagent.schema.json",
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
 
   "agents": {
-    // Main orchestrator: Claude Opus or Kimi K2.5 work best
+    // Main orchestrator: Claude Opus or Kimi K2.6 work best
     "sisyphus": {
       "model": "kimi-for-coding/k2p5",
       "ultrawork": { "model": "anthropic/claude-opus-4-7", "variant": "max" },
@@ -220,7 +220,7 @@ You can override specific agents or categories in your config:
 **Claude-like models** (instruction-following, structured output):
 
 - Claude Opus 4.7, Claude Haiku 4.5
-- Kimi K2.5 — behaves very similarly to Claude
+- Kimi K2.6 / K2.5 — behaves very similarly to Claude
 - GLM 5 — Claude-like behavior, good for broad tasks
 
 **GPT models** (explicit reasoning, principle-driven):
@@ -248,7 +248,7 @@ Oh My OpenAgent turns that into a coordinated team:
 
 **Hash-anchored edits.** Claude Code's edit tool fails when the model can't reproduce lines exactly. OmO's `LINE#ID` content hashing validates every edit before applying. Grok Code Fast 1 went from 6.7% to 68.3% success rate just from this change.
 
-**Intent Gate.** Claude Code takes your prompt and runs. OmO classifies your true intent first — research, implementation, investigation, fix — then routes accordingly. Fewer misinterpretations, better results.
+**IntentGate.** Claude Code takes your prompt and runs. OmO classifies your true intent first — research, implementation, investigation, fix — then routes accordingly. Fewer misinterpretations, better results.
 
 **LSP + AST tools.** Workspace-level rename, go-to-definition, find-references, pre-build diagnostics, AST-aware code rewrites. IDE precision that vanilla Claude Code doesn't have.
 
@@ -260,7 +260,7 @@ Oh My OpenAgent turns that into a coordinated team:
 
 ---
 
-## The Intent Gate
+## IntentGate
 
 Before acting on any request, Sisyphus classifies your true intent.
 

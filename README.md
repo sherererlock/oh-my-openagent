@@ -1,3 +1,8 @@
+> [!NOTE]
+> **Multi-Harness Agent OS Refactor in Progress**
+>
+> We are restructuring the codebase to support multiple agent harnesses (OpenCode, Codex, Pi, and others). If you are interested in contributing, please read the [ROADMAP](./ROADMAP.md) first. PRs related to roadmap work should use the `ROADMAP` label.
+
 > [!TIP]
 > **Building in Public**
 >
@@ -25,6 +30,8 @@
 
 <div align="center">
 
+<a href="https://github.com/code-yeongyu/oh-my-openagent#oh-my-openagent"><img src="./.github/assets/omo-logo.png" alt="OmO" width="200" /></a>
+
 [![Oh My OpenAgent](./.github/assets/hero.jpg)](https://github.com/code-yeongyu/oh-my-openagent#oh-my-openagent)
 
 [![Preview](./.github/assets/omo.png)](https://github.com/code-yeongyu/oh-my-openagent#oh-my-openagent)
@@ -42,13 +49,14 @@
 <div align="center">
 
 [![GitHub Release](https://img.shields.io/github/v/release/code-yeongyu/oh-my-openagent?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/releases)
-[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fohmyopenagent.com%2Fapi%2Fnpm-downloads&style=flat-square)](https://www.npmjs.com/package/oh-my-opencode)
+[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fomo.dev%2Fapi%2Fnpm-downloads&style=flat-square)](https://www.npmjs.com/package/oh-my-opencode)
 [![GitHub Contributors](https://img.shields.io/github/contributors/code-yeongyu/oh-my-openagent?color=c4f042&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/graphs/contributors)
 [![GitHub Forks](https://img.shields.io/github/forks/code-yeongyu/oh-my-openagent?color=8ae8ff&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/network/members)
 [![GitHub Stars](https://img.shields.io/github/stars/code-yeongyu/oh-my-openagent?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/stargazers)
 [![GitHub Issues](https://img.shields.io/github/issues/code-yeongyu/oh-my-openagent?color=ff80eb&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/issues)
 [![License](https://img.shields.io/badge/license-SUL--1.0-white?labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/LICENSE.md)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/code-yeongyu/oh-my-openagent)
+[![Docs](https://img.shields.io/badge/docs-omo.vibetip.help-369eff?labelColor=black&logo=readthedocs&logoColor=white&style=flat-square)](https://omo.vibetip.help/docs)
 
 [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [简体中文](README.zh-cn.md)
 
@@ -127,6 +135,12 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 ```
 
 
+## ROADMAP
+
+We are restructuring the codebase to support multiple agent harnesses (OpenCode, Codex, Pi, Claude Code, and others). The most urgent work is the package layering refactor: separating pure TypeScript core logic, MCP servers, skills, and adapter shims into distinct layers so the same logic can be reused across harnesses without duplication.
+
+If you want to contribute, read the [ROADMAP](./ROADMAP.md) first. PRs related to this refactor should use the `ROADMAP` label so we can track them.
+
 ## Highlights
 
 ### 🪄 `ultrawork`
@@ -146,6 +160,7 @@ Even with only the following subscriptions, `ultrawork` works well (this project
 |       | Feature                                                  | What it does                                                                                                                                                                                                     |
 | :---: | :------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |   🤖   | **Discipline Agents**                                    | Sisyphus orchestrates Hephaestus, Oracle, Librarian, Explore. A full AI dev team in parallel.                                                                                                                    |
+|   👥   | **Team Mode** (v4.0, opt-in)                             | Lead agent + up to 8 parallel members, real-time tmux visualization, dedicated `team_*` tools. Powers `hyperplan` (5 hostile critics) and `security-research` (3 hunters + 2 PoC engineers). [Docs →](docs/guide/team-mode.md)                                                                                                                                       |
 |   ⚡   | **`ultrawork` / `ulw`**                                  | One word. Every agent activates. Doesn't stop until done.                                                                                                                                                        |
 |   🚪   | **[IntentGate](https://factory.ai/news/terminal-bench)** | Analyzes true user intent before classifying or acting. No more literal misinterpretations.                                                                                                                      |
 |   🔗   | **Hash-Anchored Edit Tool**                              | `LINE#ID` content hash validates every change. Zero stale-line errors. Inspired by [oh-my-pi](https://github.com/can1357/oh-my-pi). [The Harness Problem →](https://blog.can.ac/2026/02/12/the-harness-problem/) |
@@ -170,7 +185,7 @@ Even with only the following subscriptions, `ultrawork` works well (this project
 
 **Sisyphus** (`claude-opus-4-7` / **`kimi-k2.6`** / **`glm-5.1`** ) is your main orchestrator. He plans, delegates to specialists, and drives tasks to completion with aggressive parallel execution. He does not stop halfway.
 
-**Hephaestus** (`gpt-5.4`) is your autonomous deep worker. Give him a goal, not a recipe. He explores the codebase, researches patterns, and executes end-to-end without hand-holding. *The Legitimate Craftsman.*
+**Hephaestus** (`gpt-5.5`) is your autonomous deep worker. Give him a goal, not a recipe. He explores the codebase, researches patterns, and executes end-to-end without hand-holding. *The Legitimate Craftsman.*
 
 **Prometheus** (`claude-opus-4-7` / **`kimi-k2.6`** / **`glm-5.1`** ) is your strategic planner. Interview mode: he asks questions, identifies scope, and builds a detailed plan before a single line of code is touched.
 
@@ -178,7 +193,31 @@ Every agent is tuned to its model's specific strengths. No manual model juggling
 
 > Anthropic [blocked OpenCode because of us.](https://x.com/thdxr/status/2010149530486911014) That's why Hephaestus is called "The Legitimate Craftsman." The irony is intentional.
 >
-> We run best on Opus, but Kimi K2.6 + GPT-5.4 already beats vanilla Claude Code. Zero config needed.
+> We run best on Opus, but Kimi K2.6 + GPT-5.5 already beats vanilla Claude Code. Zero config needed.
+
+### Team Mode (v4.0)
+
+One agent is fast. A coordinated team is *devastating*.
+
+**Team Mode** turns oh-my-openagent from "one agent with subagents" into a real multi-agent system. A lead agent orchestrates a team of category-specialized members, all running **in parallel** and communicating through dedicated tools (`team_create`, `team_send_message`, `team_task_create`, `team_status`, ...). Watch every member work simultaneously in a tmux layout with focus + grid windows.
+
+```jsonc
+// .opencode/oh-my-openagent.jsonc
+{
+  "team_mode": {
+    "enabled": true,
+    "max_parallel_members": 4,
+    "tmux_visualization": true
+  }
+}
+```
+
+Restart opencode and the `team_*` tool family unlocks. Two skills already ride on top:
+
+- **`hyperplan`** — 5 hostile agents tear apart your plan from orthogonal angles before a single line of code is written.
+- **`security-research`** — 3 vulnerability hunters + 2 PoC engineers audit your codebase in parallel, with severity calibrated by *actual exploitability*.
+
+> **Off by default. Enable it when you want it.** [Full Team Mode guide →](docs/guide/team-mode.md)
 
 ### Agent Orchestration
 
@@ -191,7 +230,7 @@ When Sisyphus delegates to a subagent, it doesn't pick a model. It picks a **cat
 | `quick`              | Single-file changes, typos         |
 | `ultrabrain`         | Hard logic, architecture decisions |
 
-The agent says what kind of work it needs; the harness picks the right model. `ultrabrain` now routes to GPT-5.4 xhigh by default. You touch nothing.
+The agent says what kind of work it needs; the harness picks the right model. `ultrabrain` now routes to GPT-5.5 xhigh by default. You touch nothing.
 
 ### Claude Code Compatibility
 
@@ -320,7 +359,7 @@ See full [Features Documentation](docs/reference/features.md).
 - **Hash-anchored Edit Tool**: `LINE#ID` references validate content before applying every change. Surgical edits, zero stale-line errors
 - **Context Injection**: Auto-inject AGENTS.md, README.md, conditional rules
 - **Claude Code Compatibility**: Full hook system, commands, skills, agents, MCPs
-- **Built-in MCPs**: websearch (Exa), context7 (docs), grep_app (GitHub search)
+- **Built-in MCPs**: websearch (Exa), context7 (docs), grep_app (GitHub search) — injected at runtime by the plugin; not visible in `opencode mcp list` (see [MCP docs](docs/reference/features.md#native-vs-plugin-injected-mcps))
 - **Session Tools**: List, read, search, and analyze session history
 - **Productivity Features**: Ralph Loop, Todo Enforcer, Comment Checker, Think Mode, and more
 - **Doctor Command**: Built-in diagnostics (`bunx oh-my-opencode doctor`) verify plugin registration, config, models, and environment
@@ -343,8 +382,8 @@ See [Configuration Documentation](docs/reference/configuration.md).
 - **Sisyphus Agent**: Main orchestrator with Prometheus (Planner) and Metis (Plan Consultant)
 - **Background Tasks**: Configure concurrency limits per provider/model
 - **Categories**: Domain-specific task delegation (`visual`, `business-logic`, custom)
-- **Hooks**: 25+ built-in hooks, all configurable via `disabled_hooks`
-- **MCPs**: Built-in websearch (Exa), context7 (docs), grep_app (GitHub search)
+- **Hooks**: 54+ lifecycle hooks (61 with Team Mode), all configurable via `disabled_hooks`
+- **MCPs**: Built-in websearch (Exa), context7 (docs), grep_app (GitHub search) — runtime-injected, not shown in `opencode mcp list`
 - **LSP**: Full LSP support with refactoring tools
 - **Experimental**: Aggressive truncation, auto-resume, and more
 
@@ -394,5 +433,6 @@ No affiliation with any project or model mentioned. Just personal experimentatio
 - [Vercel](https://vercel.com)
 - [ELESTYLE](https://elestyle.jp)
   - Makers of elepay (multi-mobile payment gateway) and OneQR (mobile application SaaS for cashless solutions).
+- [Deepgram](https://deepgram.com)
 
 *Special thanks to [@junhoyeo](https://github.com/junhoyeo) for this amazing hero image.*

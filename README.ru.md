@@ -1,3 +1,8 @@
+> [!NOTE]
+> **Рефакторинг в сторону мульти-harness агентной ОС**
+>
+> Мы перестраиваем кодовую базу для поддержки нескольких agent harness (OpenCode, Codex, Pi и другие). Если вы хотите внести вклад, пожалуйста, ознакомьтесь с [ROADMAP](./ROADMAP.md) сначала. PR, связанные с ROADMAP, должны использовать метку `ROADMAP`.
+
 > [!TIP]
 > **Building in Public**
 >
@@ -26,6 +31,8 @@
 
 <div align="center">
 
+<a href="https://github.com/code-yeongyu/oh-my-openagent#oh-my-openagent"><img src="./.github/assets/omo-logo.png" alt="OmO" width="200" /></a>
+
 [![Oh My OpenAgent](./.github/assets/hero.jpg)](https://github.com/code-yeongyu/oh-my-openagent#oh-my-openagent)
 
 [![Preview](./.github/assets/omo.png)](https://github.com/code-yeongyu/oh-my-openagent#oh-my-openagent)
@@ -43,7 +50,7 @@
 <div align="center">
 
 [![GitHub Release](https://img.shields.io/github/v/release/code-yeongyu/oh-my-openagent?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/releases)
-[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fohmyopenagent.com%2Fapi%2Fnpm-downloads&style=flat-square)](https://www.npmjs.com/package/oh-my-opencode)
+[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fomo.dev%2Fapi%2Fnpm-downloads&style=flat-square)](https://www.npmjs.com/package/oh-my-opencode)
 [![GitHub Contributors](https://img.shields.io/github/contributors/code-yeongyu/oh-my-openagent?color=c4f042&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/graphs/contributors)
 [![GitHub Forks](https://img.shields.io/github/forks/code-yeongyu/oh-my-openagent?color=8ae8ff&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/network/members)
 [![GitHub Stars](https://img.shields.io/github/stars/code-yeongyu/oh-my-openagent?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-openagent/stargazers)
@@ -145,6 +152,7 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 |     | Функция                                                  | Что делает                                                                                                                                                                                                                       |
 | --- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 🤖   | **Дисциплинированные агенты**                            | Sisyphus оркестрирует Hephaestus, Oracle, Librarian, Explore. Полноценная AI-команда разработки в параллельном режиме.                                                                                                           |
+| 👥   | **Team Mode** (v4.0, opt-in)                             | Лид-агент + до 8 параллельных участников, визуализация в tmux в реальном времени, выделенные инструменты `team_*`. Питает `hyperplan` (5 враждебных критиков) и `security-research` (3 охотника + 2 PoC-инженера). [Документация →](docs/guide/team-mode.md) |
 | ⚡   | **`ultrawork` / `ulw`**                                  | Одно слово. Все агенты активируются. Не останавливается, пока задача не выполнена.                                                                                                                                               |
 | 🚪   | **[IntentGate](https://factory.ai/news/terminal-bench)** | Анализирует истинное намерение пользователя перед классификацией и действием. Никакого буквального неверного толкования.                                                                                                         |
 | 🔗   | **Инструмент правок на основе хэш-якорей**               | Хэш содержимого `LINE#ID` проверяет каждое изменение. Ноль ошибок с устаревшими строками. Вдохновлено [oh-my-pi](https://github.com/can1357/oh-my-pi). [The Harness Problem →](https://blog.can.ac/2026/02/12/the-harness-problem/) |
@@ -169,7 +177,7 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 
 **Sisyphus** (`claude-opus-4-7` / **`kimi-k2.6`** / **`glm-5.1`**) — главный оркестратор. Он планирует, делегирует задачи специалистам и доводит их до завершения с агрессивным параллельным выполнением. Он не останавливается на полпути.
 
-**Hephaestus** (`gpt-5.4`) — автономный глубокий исполнитель. Дайте ему цель, а не рецепт. Он исследует кодовую базу, изучает паттерны и выполняет задачи сквозным образом без лишних подсказок. *Законный Мастер.*
+**Hephaestus** (`gpt-5.5`) — автономный глубокий исполнитель. Дайте ему цель, а не рецепт. Он исследует кодовую базу, изучает паттерны и выполняет задачи сквозным образом без лишних подсказок. *Законный Мастер.*
 
 **Prometheus** (`claude-opus-4-7` / **`kimi-k2.6`** / **`glm-5.1`**) — стратегический планировщик. Режим интервью: он задаёт вопросы, определяет объём работ и формирует детальный план до того, как написана хотя бы одна строка кода.
 
@@ -177,7 +185,31 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 
 > Anthropic [заблокировал OpenCode из-за нас.](https://x.com/thdxr/status/2010149530486911014) Именно поэтому Hephaestus зовётся «Законным Мастером». Ирония намеренная.
 >
-> Мы работаем лучше всего на Opus, но Kimi K2.6 + GPT-5.4 уже превосходят ванильный Claude Code. Никакой настройки не требуется.
+> Мы работаем лучше всего на Opus, но Kimi K2.6 + GPT-5.5 уже превосходят ванильный Claude Code. Никакой настройки не требуется.
+
+### Team Mode (v4.0)
+
+Один агент — это быстро. Слаженная команда — это *разрушительно*.
+
+**Team Mode** превращает oh-my-openagent из «одного агента с подагентами» в полноценную мультиагентную систему. Лид-агент оркестрирует команду специализированных по категориям участников, все они работают **параллельно** и общаются через выделенные инструменты (`team_create`, `team_send_message`, `team_task_create`, `team_status`, …). Наблюдайте за работой каждого участника одновременно в tmux-раскладке с focus- и grid-окнами.
+
+```jsonc
+// .opencode/oh-my-openagent.jsonc
+{
+  "team_mode": {
+    "enabled": true,
+    "max_parallel_members": 4,
+    "tmux_visualization": true
+  }
+}
+```
+
+Перезапустите opencode — и семейство инструментов `team_*` будет активировано. Два навыка уже стоят на этом фундаменте:
+
+- **`hyperplan`** — 5 враждебных агентов разносят ваш план под ортогональными углами ещё до написания первой строчки кода.
+- **`security-research`** — 3 охотника за уязвимостями + 2 PoC-инженера параллельно проводят аудит кодовой базы. Серьёзность калибруется по *фактической эксплуатируемости*.
+
+> **По умолчанию выключено. Включайте, когда нужно.** [Полное руководство по Team Mode →](docs/guide/team-mode.md)
 
 ### Оркестрация агентов
 
@@ -190,7 +222,7 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 | `quick`              | Изменения в одном файле, опечатки     |
 | `ultrabrain`         | Сложная логика, архитектурные решения |
 
-Агент сообщает тип задачи, а обвязка подбирает нужную модель. `ultrabrain` теперь по умолчанию направляется в GPT-5.4 xhigh. Вы ни к чему не прикасаетесь.
+Агент сообщает тип задачи, а обвязка подбирает нужную модель. `ultrabrain` теперь по умолчанию направляется в GPT-5.5 xhigh. Вы ни к чему не прикасаетесь.
 
 ### Совместимость с Claude Code
 
@@ -344,7 +376,7 @@ project/
 - **Агент Sisyphus**: Главный оркестратор с Prometheus (Планировщик) и Metis (Консультант по плану)
 - **Фоновые задачи**: Настройка ограничений параллельности по провайдеру/модели
 - **Категории**: Делегирование задач по предметной области (`visual`, `business-logic`, пользовательские)
-- **Хуки**: 25+ встроенных хуков, все настраиваются через `disabled_hooks`
+- **Хуки**: 54+ встроенных хуков жизненного цикла (61 с включённым Team Mode), все настраиваются через `disabled_hooks`
 - **MCP**: Встроенные websearch (Exa), context7 (документация), grep_app (поиск по GitHub)
 - **LSP**: Полная поддержка LSP с инструментами рефакторинга
 - **Экспериментальное**: Агрессивное усечение, автовозобновление и другое
@@ -396,5 +428,6 @@ project/
 - [Vercel](https://vercel.com)
 - [ELESTYLE](https://elestyle.jp)
   - Создатели elepay (мультимобильный платёжный шлюз) и OneQR (мобильное SaaS-приложение для безналичных расчётов).
+- [Deepgram](https://deepgram.com)
 
 *Особая благодарность [@junhoyeo](https://github.com/junhoyeo) за это потрясающее hero-изображение.*

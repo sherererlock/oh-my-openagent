@@ -13,6 +13,7 @@ export interface AtlasHookOptions {
   isContinuationStopped?: (sessionID: string) => boolean
   isCallerOrchestrator?: (sessionID: string | undefined) => Promise<boolean>
   agentOverrides?: AgentOverrides
+  idleSettleMs?: number
   /** Enable auto-commit after each atomic task completion (default: true) */
   autoCommit?: boolean
 }
@@ -47,4 +48,12 @@ export interface SessionState {
   waitingForFinalWaveApproval?: boolean
   pendingFinalWaveTaskCount?: number
   approvedFinalWaveTaskCount?: number
+  boulderCompletionNudgedAt?: Record<string, number>
+  awaitingToolProgressAfterContinuation?: boolean
+  iterationsSinceLastToolProgress?: number
+  lastToolProgressAt?: number
+  stalledContinuationReason?: string
+  stalledContinuationPlanPath?: string
+  /** The plan path the in-progress no-tool-progress counter is keyed to. Changes here reset the counter. */
+  activeContinuationPlanPath?: string
 }

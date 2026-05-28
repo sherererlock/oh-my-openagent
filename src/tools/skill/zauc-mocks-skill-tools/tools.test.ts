@@ -12,6 +12,7 @@ import { clearSkillCache } from "../../../features/opencode-skill-loader/skill-c
 import type { LoadedSkill } from "../../../features/opencode-skill-loader/types"
 import type { CommandInfo } from "../../slashcommand/types"
 import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js"
+import { unsafeTestValue } from "../../../../test-support/unsafe-test-value"
 
 const originalReadFileSync = fs.readFileSync.bind(fs)
 
@@ -205,7 +206,7 @@ describe("skill tool - agent restriction", () => {
     // given
     const loadedSkills = [createMockSkill("sisyphus-only-skill", { agent: "sisyphus" })]
     const tool = createSkillTool({ skills: loadedSkills })
-    const contextWithoutAgent = { ...mockContext, agent: undefined as unknown as string }
+    const contextWithoutAgent = { ...mockContext, agent: unsafeTestValue<string>(undefined) }
 
     // when / #then
     return expect(tool.execute({ name: "sisyphus-only-skill" }, contextWithoutAgent)).rejects.toThrow(
@@ -635,6 +636,50 @@ describe("skill tool - dynamic discovery", () => {
     expect(result).not.toContain("SHOULD_BE_OVERRIDDEN")
   })
 })
+describe("skill tool - agent-restricted skill visibility in description", () => {
+  it("excludes agent-restricted skill from description <available_items>", () => {
+    // given: a skill restricted to oracle, and a public skill
+    const loadedSkills = [
+      createMockSkill("public-skill"),
+      createMockSkill("oracle-only-skill", { agent: "oracle" }),
+    ]
+
+    // when: tool is created with these skills (as tool-registry would inject them)
+    const tool = createSkillTool({ skills: loadedSkills })
+
+    // then: oracle-only skill must NOT appear in the description
+    expect(tool.description).toContain("public-skill")
+    expect(tool.description).not.toContain("oracle-only-skill")
+  })
+
+  it("includes public skill (no agent field) in description regardless of context", () => {
+    // given
+    const loadedSkills = [createMockSkill("public-skill")]
+
+    // when
+    const tool = createSkillTool({ skills: loadedSkills })
+
+    // then
+    expect(tool.description).toContain("public-skill")
+  })
+
+  it("execute still works for agent-restricted skill when called with correct agent context", async () => {
+    // given: tool created WITHOUT the restricted skill in description list,
+    // but the full skill list is available for execute via getSkills()
+    // (simulating what tool-registry does: description uses filtered list,
+    //  but execute discovers from disk / full list)
+    const restrictedSkill = createMockSkill("oracle-only-skill", { agent: "oracle" })
+    const tool = createSkillTool({ skills: [restrictedSkill] })
+    const oracleContext = { ...mockContext, agent: "oracle" }
+
+    // when: oracle agent explicitly calls the skill
+    const result = await tool.execute({ name: "oracle-only-skill" }, oracleContext)
+
+    // then: execution succeeds
+    expect(result).toContain("oracle-only-skill")
+  })
+})
+
 describe("skill tool - dynamic description cache invalidation", () => {
   it("keeps description available after execute misses a skill", async () => {
     // given
